@@ -1,2 +1,5 @@
 .env
 node_modules/
+ideas.md
+log.db
+personalities.ts

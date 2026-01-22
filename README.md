@@ -18,13 +18,12 @@ cd workout-log-bot
 ```
 
 2. Install dependencies
-1. Clone the repository
 
 ```bash
 npm install
 ```
 
-3. Create file .env in the root and pass the bot's token
+2. Create file .env in the root and pass the bot's token
 
 ```
 BOT_TOKEN=your_bot_token
