@@ -1,5 +1,6 @@
 .env
 node_modules/
 ideas.md
-log.db
+dev.db
 personalities.ts
+/generated/prisma
