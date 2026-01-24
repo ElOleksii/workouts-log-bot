@@ -47,6 +47,14 @@ const initial = (): SessionData => {
 };
 bot.use(session({ initial }));
 
+await bot.api.setMyCommands([
+  { command: "new", description: "Start new workout" },
+  { command: "finish", description: "Finish current workout" },
+  { command: "cancel", description: "Cancel current workout" },
+  { command: "find", description: "Find a workout(s) by date" },
+  // { command: "persona", description: "Select a bot persona" },
+]);
+
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n." +
@@ -57,14 +65,14 @@ bot.command("start", async (ctx) => {
       "How it works:\n" +
       "1. Write a name of the exercise ('Pull-ups', for example)" +
       "2. Write current weight and reps the set ('80, 12', for exmaple)" +
-      "3. Repeat for new exercises"
+      "3. Repeat for new exercises",
   );
 });
 
 bot.command("new", async (ctx) => {
   if (ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are training now. Finish current workout first."
+      "Sir, you are training now. Finish current workout first.",
     );
   }
 
@@ -72,21 +80,21 @@ bot.command("new", async (ctx) => {
   const date = new Date().toISOString();
 
   const record = db.prepare(
-    `INSERT INTO workouts(user_id, start_time, created_at ) VALUES(?, ?, ?)`
+    `INSERT INTO workouts(user_id, start_time, created_at ) VALUES(?, ?, ?)`,
   );
   const info = record.run(userId, date, date);
 
   ctx.session.activeWorkoutId = Number(info.lastInsertRowid);
 
   await ctx.reply(
-    'Sir, workout has started, good luck! Write a name of the first exercise ("Pull-ups", for example)'
+    'Sir, workout has started, good luck! Write a name of the first exercise ("Pull-ups", for example)',
   );
 });
 
 bot.command("finish", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first."
+      "Sir, you are not training right now. Start a workout first.",
     );
   }
 
@@ -94,19 +102,19 @@ bot.command("finish", async (ctx) => {
   const date = new Date().toISOString();
 
   db.prepare(
-    `UPDATE workouts SET is_finished = 1, end_time = ? WHERE id = ?`
+    `UPDATE workouts SET is_finished = 1, end_time = ? WHERE id = ?`,
   ).run(date, currentWorkout);
 
   ctx.session.activeWorkoutId = null;
   ctx.session.currentExerciseId = null;
 
-  await ctx.reply("Great job, sir. ");
+  await ctx.reply("Great job, sir. Your workout has been recorded.");
 });
 
 bot.command("cancel", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first."
+      "Sir, you are not training right now. Start a workout first.",
     );
   }
 
@@ -120,17 +128,6 @@ bot.command("cancel", async (ctx) => {
   await ctx.reply("Sir, your current workout has canceled. Take care.");
 });
 
-bot.command("persona", async (ctx) => {
-  const labels = ["Butler", "Gym Bro", "Anime Girl"];
-
-  const buttonRows = labels.map((label) => [Keyboard.text(label)]);
-  const keyboard = Keyboard.from(buttonRows).resized();
-
-  await ctx.reply("Choose the persona:", {
-    reply_markup: keyboard,
-  });
-});
-
 bot.on("message:text", async (ctx) => {
   const text = ctx.message.text.trim();
 
@@ -138,7 +135,7 @@ bot.on("message:text", async (ctx) => {
     return ctx.reply("Sir, you must start a new training first using /new.");
   }
 
-  const setRegex = /^(\d+(?:\.\d+)?)\s+(\d+)$/;
+  const setRegex = /^(\d+(?:\.\d+)?)[,\s]+(\d+)$/;
   const match = text.match(setRegex);
 
   if (match && match[1] && match[2]) {
@@ -146,27 +143,27 @@ bot.on("message:text", async (ctx) => {
       return ctx.reply("Sir, you must write name of the exercise.");
     }
 
-    const activeWorkout = ctx.session.activeWorkoutId;
+    const currentExercise = ctx.session.currentExerciseId;
     const weight = parseFloat(match[1]);
     const reps = parseInt(match[2]);
 
     db.prepare(
-      `INSERT INTO sets (exercise_id, reps, weight) VALUES (?, ?, ?)`
-    ).run(activeWorkout, weight, reps);
+      `INSERT INTO sets (exercise_id, reps, weight) VALUES (?, ?, ?)`,
+    ).run(currentExercise, weight, reps);
 
     await ctx.reply("Understood, Sir, the set is has been recorded.");
   } else {
     const activeWorkout = ctx.session.activeWorkoutId;
 
     const record = db.prepare(
-      `INSERT INTO exercises (workout_id, name) VALUE (?, ?)`
+      `INSERT INTO exercises (workout_id, name) VALUES (?, ?)`,
     );
     const info = record.run(activeWorkout, text);
 
     ctx.session.currentExerciseId = Number(info.lastInsertRowid);
 
     await ctx.reply(
-      `Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example). `
+      `Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example). `,
     );
   }
 });
