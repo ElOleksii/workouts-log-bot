@@ -4,3 +4,4 @@ ideas.md
 dev.db
 personalities.ts
 /generated/prisma
+dist/

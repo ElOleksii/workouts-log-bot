@@ -1,12 +1,5 @@
 import "dotenv/config";
-import {
-  Bot,
-  Context,
-  Keyboard,
-  InlineKeyboard,
-  session,
-  type SessionFlavor,
-} from "grammy";
+import { Bot, Context, session, type SessionFlavor } from "grammy";
 import { prisma } from "./prisma";
 import { calculateWorkoutTime } from "./queries";
 import { formatDuration } from "./utils";
@@ -195,7 +188,10 @@ bot.command("find", async (ctx) => {
     return ctx.reply(`No workouts founded for ${dateString}`);
   }
 
-  let responseMessage = `**Workouts for ${targetDate.toLocaleDateString()}:**\n\n`;
+  let responseMessage =
+    length >= 2
+      ? `**Workouts for ${targetDate.toLocaleDateString()}:**\n\n`
+      : "";
 
   for (const workout of workouts) {
     const startTime = workout.startTime
@@ -233,7 +229,7 @@ bot.command("find", async (ctx) => {
 
     if (!duration) return;
 
-    responseMessage += `\n   Time for this training ${formatDuration(duration)}`;
+    responseMessage += `\nTime for this training ${formatDuration(duration)}`;
   }
 
   await ctx.reply(responseMessage, { parse_mode: "Markdown" });
