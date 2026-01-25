@@ -18,7 +18,7 @@ interface SessionData {
 
 type MyContext = Context & SessionFlavor<SessionData>;
 
-const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
+export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
 const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
