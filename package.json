@@ -2,6 +2,7 @@
   "type": "module",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.0.10",
     "prisma": "^7.3.0",
     "ts-node": "^10.9.2",
@@ -10,8 +11,9 @@
   },
   "scripts": {
     "dev": "tsx watch ./src/bot.ts",
-    "start": "node /src/bot.js",
-    "build": "tsc"
+    "start": "node dist/bot.js",
+    "build": "tsc",
+    "set:commands": "tsx scripts/setCommands.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.3.0",
@@ -19,6 +21,7 @@
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.2.3",
     "env": "^0.0.2",
+    "express": "^5.2.1",
     "grammy": "^1.39.3",
     "tsx": "^4.21.0"
   }
