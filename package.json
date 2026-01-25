@@ -13,7 +13,7 @@
     "dev": "tsx watch ./src/bot.ts",
     "start": "node dist/bot.js",
     "build": "tsc",
-    "set:commands": "tsx scripts/setCommands.ts"
+    "setup:bot": "tsx scripts/setCommands.ts && tsx scripts/setWebhook.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.3.0",
