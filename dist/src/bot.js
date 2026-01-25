@@ -1,8 +1,9 @@
 import "dotenv/config";
-import { Bot, Context, session } from "grammy";
+import { Bot, Context, session, webhookCallback, } from "grammy";
 import { prisma } from "./prisma";
 import { calculateWorkoutTime } from "./queries";
 import { formatDuration } from "./utils";
+import express from "express";
 const bot = new Bot(process.env.BOT_TOKEN);
 const initial = () => {
     return {
@@ -11,13 +12,6 @@ const initial = () => {
     };
 };
 bot.use(session({ initial }));
-await bot.api.setMyCommands([
-    { command: "new", description: "Start new workout" },
-    { command: "finish", description: "Finish current workout" },
-    { command: "cancel", description: "Cancel current workout" },
-    { command: "find", description: "Find a workout(s) by date" },
-    // { command: "persona", description: "Select a bot persona" },
-]);
 bot.command("start", async (ctx) => {
     await ctx.reply("Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n." +
         "Commands\n" +
@@ -210,5 +204,8 @@ bot.on("message:text", async (ctx) => {
         await ctx.reply(`Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example).`);
     }
 });
-bot.start();
+const app = express();
+app.use(express.json());
+app.post("/api/webhook", webhookCallback(bot, "express"));
+export default app;
 //# sourceMappingURL=bot.js.map

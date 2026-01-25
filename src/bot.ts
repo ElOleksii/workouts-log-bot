@@ -1,8 +1,15 @@
 import "dotenv/config";
-import { Bot, Context, session, type SessionFlavor } from "grammy";
+import {
+  Bot,
+  Context,
+  session,
+  webhookCallback,
+  type SessionFlavor,
+} from "grammy";
 import { prisma } from "./prisma";
 import { calculateWorkoutTime } from "./queries";
 import { formatDuration } from "./utils";
+import express from "express";
 
 interface SessionData {
   activeWorkoutId: number | null;
@@ -20,14 +27,6 @@ const initial = (): SessionData => {
 };
 bot.use(session({ initial }));
 
-await bot.api.setMyCommands([
-  { command: "new", description: "Start new workout" },
-  { command: "finish", description: "Finish current workout" },
-  { command: "cancel", description: "Cancel current workout" },
-  { command: "find", description: "Find a workout(s) by date" },
-  // { command: "persona", description: "Select a bot persona" },
-]);
-
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n." +
@@ -38,14 +37,14 @@ bot.command("start", async (ctx) => {
       "How it works:\n" +
       "1. Write a name of the exercise ('Pull-ups', for example)" +
       "2. Write current weight and reps the set ('80, 12', for exmaple)" +
-      "3. Repeat for new exercises",
+      "3. Repeat for new exercises"
   );
 });
 
 bot.command("new", async (ctx) => {
   if (ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are training now. Finish current workout first.",
+      "Sir, you are training now. Finish current workout first."
     );
   }
 
@@ -66,14 +65,14 @@ bot.command("new", async (ctx) => {
   ctx.session.activeWorkoutId = workout.id;
 
   await ctx.reply(
-    'Sir, workout has started, good luck! Write a name of the first exercise ("Pull-ups", for example)',
+    'Sir, workout has started, good luck! Write a name of the first exercise ("Pull-ups", for example)'
   );
 });
 
 bot.command("finish", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first.",
+      "Sir, you are not training right now. Start a workout first."
     );
   }
 
@@ -101,14 +100,14 @@ bot.command("finish", async (ctx) => {
 
   await ctx.reply(
     "Great job, sir. Your workout has been recorded." +
-      `\nTime for this training ${formatDuration(duration)}`,
+      `\nTime for this training ${formatDuration(duration)}`
   );
 });
 
 bot.command("cancel", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first.",
+      "Sir, you are not training right now. Start a workout first."
     );
   }
 
@@ -139,7 +138,7 @@ bot.command("find", async (ctx) => {
     const match = inputDate.match(dateRegex);
     if (!match) {
       return ctx.reply(
-        "Invalid date format. Please use DD.MM.YYYY, DD MM YYYY, DD.MM.YY or DD.MM",
+        "Invalid date format. Please use DD.MM.YYYY, DD MM YYYY, DD.MM.YY or DD.MM"
       );
     }
 
@@ -218,7 +217,9 @@ bot.command("find", async (ctx) => {
 
       if (exercise.sets.length > 0) {
         exercise.sets.forEach((set, setIndex) => {
-          responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${set.reps}\n`;
+          responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${
+            set.reps
+          }\n`;
         });
       } else {
         responseMessage += `   (No sets)\n`;
@@ -276,9 +277,15 @@ bot.on("message:text", async (ctx) => {
     ctx.session.currentExerciseId = exercise.id;
 
     await ctx.reply(
-      `Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example).`,
+      `Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example).`
     );
   }
 });
 
-bot.start();
+const app = express();
+
+app.use(express.json());
+
+app.post("/api/webhook", webhookCallback(bot, "express"));
+
+export default app;
