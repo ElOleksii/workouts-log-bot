@@ -27,6 +27,7 @@ npm install
 
 ```
 BOT_TOKEN=your_bot_token
+DATABASE_URL=your_database_url
 ```
 
 4. Create a migration to set up the database tables
@@ -45,4 +46,10 @@ npx prisma generate
 
 ```bash
 npm run dev
+```
+
+7. You can build the code using
+
+```bash
+npm run build
 ```
