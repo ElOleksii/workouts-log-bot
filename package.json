@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "tsx watch ./src/bot.ts",
     "start": "node dist/bot.js",
-    "build": "tsc",
+    "build": "npx prisma generate && tsc",
     "setup:bot": "tsx scripts/setCommands.ts && tsx scripts/setWebhook.ts"
   },
   "dependencies": {
