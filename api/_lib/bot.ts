@@ -6,9 +6,9 @@ import {
   webhookCallback,
   type SessionFlavor,
 } from "grammy";
-import { prisma } from "./prisma";
-import { calculateWorkoutTime } from "./queries";
-import { formatDuration } from "./utils";
+import { prisma } from "./prisma.js";
+import { calculateWorkoutTime } from "./queries.js";
+import { formatDuration } from "./utils.js";
 
 interface SessionData {
   activeWorkoutId: number | null;
