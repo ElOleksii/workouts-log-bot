@@ -1,7 +1,7 @@
 .env
 node_modules/
 ideas.md
-dev.db
+*.db
 personalities.ts
 /generated/prisma
 dist/
