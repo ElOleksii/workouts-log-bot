@@ -9,7 +9,6 @@ import {
 import { prisma } from "./prisma";
 import { calculateWorkoutTime } from "./queries";
 import { formatDuration } from "./utils";
-import express, { type Request, type Response } from "express";
 
 interface SessionData {
   activeWorkoutId: number | null;
@@ -18,7 +17,7 @@ interface SessionData {
 
 type MyContext = Context & SessionFlavor<SessionData>;
 
-const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
+export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
 const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
@@ -27,13 +26,16 @@ const initial = (): SessionData => {
 };
 bot.use(session({ initial }));
 
-await bot.api.setMyCommands([
-  { command: "new", description: "Start new workout" },
-  { command: "finish", description: "Finish current workout" },
-  { command: "cancel", description: "Cancel current workout" },
-  { command: "find", description: "Find a workout(s) by date" },
-  // { command: "persona", description: "Select a bot persona" },
-]);
+try {
+  await bot.api.setMyCommands([
+    { command: "new", description: "Start new workout" },
+    { command: "finish", description: "Finish current workout" },
+    { command: "cancel", description: "Cancel current workout" },
+    { command: "find", description: "Find a workout(s) by date" },
+  ]);
+} catch (e) {
+  console.error("Failed to set commands", e);
+}
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
@@ -292,4 +294,6 @@ bot.on("message:text", async (ctx) => {
   }
 });
 
-bot.start();
+bot.catch((err) => {
+  console.error("Error inside bot logic:", err);
+});
