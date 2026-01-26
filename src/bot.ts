@@ -1,8 +1,15 @@
 import "dotenv/config";
-import { Bot, Context, session, type SessionFlavor } from "grammy";
+import {
+  Bot,
+  Context,
+  session,
+  webhookCallback,
+  type SessionFlavor,
+} from "grammy";
 import { prisma } from "./prisma";
 import { calculateWorkoutTime } from "./queries";
 import { formatDuration } from "./utils";
+import express, { type Request, type Response } from "express";
 
 interface SessionData {
   activeWorkoutId: number | null;
@@ -30,15 +37,16 @@ await bot.api.setMyCommands([
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
-    "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n." +
+    "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n" +
       "Commands\n" +
       "/new - Start new workout\n" +
       "/finish - Finish current workout\n" +
-      "/cancel - Cancel current workout\n\n" +
+      "/cancel - Cancel current workout\n" +
+      "/find - You can find a workout by day (e.g. DD.MM.YYYY, DD MM YYYY, DD.MM.YY)\n\n" +
       "How it works:\n" +
-      "1. Write a name of the exercise ('Pull-ups', for example)" +
-      "2. Write current weight and reps the set ('80, 12', for exmaple)" +
-      "3. Repeat for new exercises",
+      "1. Write a name of the exercise ('Pull-ups', for example)\n" +
+      "2. Write current weight and reps the set ('80, 12', for exmaple)\n" +
+      "3. Repeat for new exercises\n",
   );
 });
 
@@ -170,6 +178,7 @@ bot.command("find", async (ctx) => {
         gte: startOfDay,
         lte: endOfDay,
       },
+      isFinished: true,
     },
     include: {
       exercises: {
@@ -188,8 +197,10 @@ bot.command("find", async (ctx) => {
     return ctx.reply(`No workouts founded for ${dateString}`);
   }
 
+  console.log(workouts.length);
+
   let responseMessage =
-    length >= 2
+    workouts.length >= 2
       ? `**Workouts for ${targetDate.toLocaleDateString()}:**\n\n`
       : "";
 
@@ -207,7 +218,7 @@ bot.command("find", async (ctx) => {
         })
       : "...";
 
-    responseMessage += `🏋️‍♂️ **Workout at ${startTime} - ${endTime}**\n`;
+    responseMessage += `**Workout at ${startTime} - ${endTime}**\n`;
 
     if (workout.exercises.length === 0) {
       responseMessage += `_No exercises recorded._\n`;
