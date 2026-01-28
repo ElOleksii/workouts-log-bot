@@ -1,11 +1,5 @@
 import "dotenv/config";
-import {
-  Bot,
-  Context,
-  session,
-  webhookCallback,
-  type SessionFlavor,
-} from "grammy";
+import { Bot, Context, session, type SessionFlavor } from "grammy";
 import { prisma } from "./prisma.js";
 import { calculateWorkoutTime } from "./queries.js";
 import { formatDuration } from "./utils.js";

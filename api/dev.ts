@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { bot } from "./_lib/bot";
+import { bot } from "./src/bot";
 
 console.log("Bot is working locally (Long Polling)...");
 bot.start();
