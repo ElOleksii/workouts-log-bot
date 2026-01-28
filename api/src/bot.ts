@@ -22,28 +22,28 @@ bot.use(session({ initial }));
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
-    "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n" +
-      "Commands\n" +
-      "/new - Start new workout\n" +
-      "/finish - Finish current workout\n" +
-      "/cancel - Cancel current workout\n" +
-      "/find - You can find a workout by day (e.g. DD.MM.YYYY, DD MM YYYY, DD.MM.YY)\n\n" +
-      "How it works:\n" +
-      "1. Write a name of the exercise ('Pull-ups', for example)\n" +
-      "2. Write current weight and reps the set ('80, 12', for exmaple)\n" +
-      "3. Repeat for new exercises\n",
+    "Welcome to the Workout Logging System. This service helps you track and manage your training sessions.\n\n" +
+      "Available Commands:\n" +
+      "/new - Start a new workout session\n" +
+      "/finish - Complete the current workout session\n" +
+      "/cancel - Cancel the current workout session\n" +
+      "/find - Retrieve workouts by date (format: DD.MM.YYYY, DD MM YYYY, or DD.MM.YY)\n\n" +
+      "Usage Instructions:\n" +
+      "1. Enter the exercise name (e.g., 'Pull-ups')\n" +
+      "2. Enter the weight and repetitions (e.g., '80, 12')\n" +
+      "3. Continue with additional exercises as needed\n",
   );
 });
 
 bot.command("new", async (ctx) => {
   if (ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are training now. Finish current workout first.",
+      "A workout session is already in progress. Please complete or cancel the current session before starting a new one.",
     );
   }
 
   if (!ctx.from?.id) {
-    return ctx.reply("Cannot start workout: user ID not found.");
+    return ctx.reply("Unable to verify user identification. Please try again.");
   }
   const userId = ctx.from?.id;
   const date = new Date().toISOString();
@@ -59,14 +59,14 @@ bot.command("new", async (ctx) => {
   ctx.session.activeWorkoutId = workout.id;
 
   await ctx.reply(
-    'Sir, workout has started, good luck! Write a name of the first exercise ("Pull-ups", for example)',
+    'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
   );
 });
 
 bot.command("finish", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first.",
+      "No active workout session detected. Use /new to begin a new session.",
     );
   }
 
@@ -93,15 +93,15 @@ bot.command("finish", async (ctx) => {
   }
 
   await ctx.reply(
-    "Great job, sir. Your workout has been recorded." +
-      `\nTime for this training ${formatDuration(duration)}`,
+    "Workout session successfully completed and recorded." +
+      `\nSession duration: ${formatDuration(duration)}`,
   );
 });
 
 bot.command("cancel", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "Sir, you are not training right now. Start a workout first.",
+      "No active workout session found. Use /new to start a new session.",
     );
   }
 
@@ -116,12 +116,12 @@ bot.command("cancel", async (ctx) => {
   ctx.session.activeWorkoutId = null;
   ctx.session.currentExerciseId = null;
 
-  await ctx.reply("Sir, your current workout has canceled. Take care.");
+  await ctx.reply("Workout session has been canceled successfully.");
 });
 
 bot.command("find", async (ctx) => {
   const userId = ctx.from?.id;
-  if (!userId) return ctx.reply("User ID not found.");
+  if (!userId) return ctx.reply("User identification not found. Please try again.");
 
   const dateRegex = /^(\d{1,2})([.\s])(\d{1,2})(?:\2(\d{2}|\d{4}))?$/;
 
@@ -132,7 +132,7 @@ bot.command("find", async (ctx) => {
     const match = inputDate.match(dateRegex);
     if (!match) {
       return ctx.reply(
-        "Invalid date format. Please use DD.MM.YYYY, DD MM YYYY, DD.MM.YY or DD.MM",
+        "Invalid date format. Please use one of the following formats: DD.MM.YYYY, DD MM YYYY, DD.MM.YY, or DD.MM",
       );
     }
 
@@ -179,7 +179,7 @@ bot.command("find", async (ctx) => {
 
   if (workouts.length === 0) {
     const dateString = targetDate.toLocaleDateString();
-    return ctx.reply(`No workouts founded for ${dateString}`);
+    return ctx.reply(`No workout sessions found for ${dateString}.`);
   }
 
   console.log(workouts.length);
@@ -217,7 +217,7 @@ bot.command("find", async (ctx) => {
           responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${set.reps}\n`;
         });
       } else {
-        responseMessage += `   (No sets)\n`;
+        responseMessage += `   (No sets recorded)\n`;
       }
     });
 
@@ -225,7 +225,7 @@ bot.command("find", async (ctx) => {
 
     if (!duration) return;
 
-    responseMessage += `\nTime for this training ${formatDuration(duration)}`;
+    responseMessage += `\nSession duration: ${formatDuration(duration)}`;
   }
 
   await ctx.reply(responseMessage, { parse_mode: "Markdown" });
@@ -235,7 +235,7 @@ bot.on("message:text", async (ctx) => {
   const text = ctx.message.text.trim();
 
   if (!ctx.session.activeWorkoutId) {
-    return ctx.reply("Sir, you must start a new training first using /new.");
+    return ctx.reply("No active workout session. Please use /new to begin a new session.");
   }
 
   const setRegex = /^(\d+(?:\.\d+)?)[,\s]+(\d+)$/;
@@ -243,7 +243,7 @@ bot.on("message:text", async (ctx) => {
 
   if (match && match[1] && match[2]) {
     if (!ctx.session.currentExerciseId) {
-      return ctx.reply("Sir, you must write name of the exercise.");
+      return ctx.reply("Exercise name required. Please specify an exercise before logging sets.");
     }
 
     const currentExercise = ctx.session.currentExerciseId;
@@ -272,7 +272,7 @@ bot.on("message:text", async (ctx) => {
     ctx.session.currentExerciseId = exercise.id;
 
     await ctx.reply(
-      `Sir, the your current exercise ${text}\nNext step - provide weight and reps (50, 5 - for example).`,
+      `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`,
     );
   }
 });
