@@ -20,17 +20,6 @@ const initial = (): SessionData => {
 };
 bot.use(session({ initial }));
 
-try {
-  await bot.api.setMyCommands([
-    { command: "new", description: "Start new workout" },
-    { command: "finish", description: "Finish current workout" },
-    { command: "cancel", description: "Cancel current workout" },
-    { command: "find", description: "Find a workout(s) by date" },
-  ]);
-} catch (e) {
-  console.error("Failed to set commands", e);
-}
-
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "Hi, Sir! I'm your personal Gym Assistant and I'm here to log your workout\n\n" +
