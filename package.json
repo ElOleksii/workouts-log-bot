@@ -10,8 +10,8 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "dev": "tsx watch dev.ts",
-    "start": "node dist/api/index.js",
+    "dev": "tsx watch api/dev.ts",
+    "start": "node build/api/index.js",
     "build": "tsc",
     "postinstall": "prisma generate"
   },
