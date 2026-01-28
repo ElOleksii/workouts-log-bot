@@ -20,6 +20,17 @@ const initial = (): SessionData => {
 };
 bot.use(session({ initial }));
 
+try {
+  await bot.api.setMyCommands([
+    { command: "new", description: "Start new workout" },
+    { command: "finish", description: "Finish current workout" },
+    { command: "cancel", description: "Cancel current workout" },
+    { command: "find", description: "Find a workout(s) by date" },
+  ]);
+} catch (e) {
+  console.error("Failed to set commands", e);
+}
+
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "Welcome to the Workout Logging System. This service helps you track and manage your training sessions.\n\n" +
