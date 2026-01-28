@@ -13,7 +13,9 @@
     "dev": "tsx watch api/dev.ts",
     "start": "node build/api/index.js",
     "build": "tsc",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "webhook": "tsx scripts/setWebhook.ts",
+    "commands": "tsx scripts/setCommands.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
