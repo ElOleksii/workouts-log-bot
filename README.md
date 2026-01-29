@@ -25,7 +25,7 @@ cd workout-log-bot
 npm install
 ```
 
-3. Create file .env in the root and pass the bot's token
+3. Create file .env in the root and pass the bot's token and the other URLs
 
 ```
 BOT_TOKEN=your_bot_token
