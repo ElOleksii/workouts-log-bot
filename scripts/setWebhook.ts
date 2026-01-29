@@ -9,7 +9,8 @@ if (!url) {
   process.exit(1);
 }
 
-const fullUrl = url.endsWith("/api/index") ? url : `${url}/api/index`;
+const cleanUrl = url.replace(/\/+$/, "");
+const fullUrl = `${cleanUrl}/api/index`;
 
 const bot = new Bot(process.env.BOT_TOKEN!);
 
