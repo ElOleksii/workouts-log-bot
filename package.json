@@ -3,8 +3,11 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.0.10",
+    "jest": "^30.2.0",
     "prisma": "^7.3.0",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
@@ -15,7 +18,10 @@
     "build": "tsc",
     "postinstall": "prisma generate",
     "webhook": "tsx scripts/setWebhook.ts",
-    "commands": "tsx scripts/setCommands.ts"
+    "commands": "tsx scripts/setCommands.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@grammyjs/storage-redis": "^2.5.1",

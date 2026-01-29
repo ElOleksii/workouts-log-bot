@@ -5,3 +5,4 @@ ideas.md
 personalities.ts
 /generated/prisma
 dist/
+/coverage
