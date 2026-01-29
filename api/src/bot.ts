@@ -3,6 +3,8 @@ import { Bot, Context, session, type SessionFlavor } from "grammy";
 import { prisma } from "./prisma.js";
 import { calculateWorkoutTime } from "./queries.js";
 import { formatDuration } from "./utils.js";
+import IORedis from "ioredis";
+import { RedisAdapter } from "@grammyjs/storage-redis";
 
 interface SessionData {
   activeWorkoutId: number | null;
@@ -11,6 +13,12 @@ interface SessionData {
 
 type MyContext = Context & SessionFlavor<SessionData>;
 
+if (!process.env.REDIS_URL) {
+  throw new Error("REDIS_URL is not defined in environment variables");
+}
+
+const redisInstance = new IORedis(process.env.REDIS_URL);
+
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
 const initial = (): SessionData => {
   return {
@@ -18,7 +26,13 @@ const initial = (): SessionData => {
     currentExerciseId: null,
   };
 };
-bot.use(session({ initial }));
+
+bot.use(
+  session({
+    initial,
+    storage: new RedisAdapter({ instance: redisInstance, ttl: 3600 * 4 }),
+  })
+);
 
 bot.command("start", async (ctx) => {
   await ctx.reply(
@@ -31,14 +45,14 @@ bot.command("start", async (ctx) => {
       "Usage Instructions:\n" +
       "1. Enter the exercise name (e.g., 'Pull-ups')\n" +
       "2. Enter the weight and repetitions (e.g., '80, 12')\n" +
-      "3. Continue with additional exercises as needed\n",
+      "3. Continue with additional exercises as needed\n"
   );
 });
 
 bot.command("new", async (ctx) => {
   if (ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "A workout session is already in progress. Please complete or cancel the current session before starting a new one.",
+      "A workout session is already in progress. Please complete or cancel the current session before starting a new one."
     );
   }
 
@@ -59,14 +73,14 @@ bot.command("new", async (ctx) => {
   ctx.session.activeWorkoutId = workout.id;
 
   await ctx.reply(
-    'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
+    'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").'
   );
 });
 
 bot.command("finish", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "No active workout session detected. Use /new to begin a new session.",
+      "No active workout session detected. Use /new to begin a new session."
     );
   }
 
@@ -94,14 +108,14 @@ bot.command("finish", async (ctx) => {
 
   await ctx.reply(
     "Workout session successfully completed and recorded." +
-      `\nSession duration: ${formatDuration(duration)}`,
+      `\nSession duration: ${formatDuration(duration)}`
   );
 });
 
 bot.command("cancel", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "No active workout session found. Use /new to start a new session.",
+      "No active workout session found. Use /new to start a new session."
     );
   }
 
@@ -121,7 +135,8 @@ bot.command("cancel", async (ctx) => {
 
 bot.command("find", async (ctx) => {
   const userId = ctx.from?.id;
-  if (!userId) return ctx.reply("User identification not found. Please try again.");
+  if (!userId)
+    return ctx.reply("User identification not found. Please try again.");
 
   const dateRegex = /^(\d{1,2})([.\s])(\d{1,2})(?:\2(\d{2}|\d{4}))?$/;
 
@@ -132,7 +147,7 @@ bot.command("find", async (ctx) => {
     const match = inputDate.match(dateRegex);
     if (!match) {
       return ctx.reply(
-        "Invalid date format. Please use one of the following formats: DD.MM.YYYY, DD MM YYYY, DD.MM.YY, or DD.MM",
+        "Invalid date format. Please use one of the following formats: DD.MM.YYYY, DD MM YYYY, DD.MM.YY, or DD.MM"
       );
     }
 
@@ -214,7 +229,9 @@ bot.command("find", async (ctx) => {
 
       if (exercise.sets.length > 0) {
         exercise.sets.forEach((set, setIndex) => {
-          responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${set.reps}\n`;
+          responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${
+            set.reps
+          }\n`;
         });
       } else {
         responseMessage += `   (No sets recorded)\n`;
@@ -235,7 +252,9 @@ bot.on("message:text", async (ctx) => {
   const text = ctx.message.text.trim();
 
   if (!ctx.session.activeWorkoutId) {
-    return ctx.reply("No active workout session. Please use /new to begin a new session.");
+    return ctx.reply(
+      "No active workout session. Please use /new to begin a new session."
+    );
   }
 
   const setRegex = /^(\d+(?:\.\d+)?)[,\s]+(\d+)$/;
@@ -243,7 +262,9 @@ bot.on("message:text", async (ctx) => {
 
   if (match && match[1] && match[2]) {
     if (!ctx.session.currentExerciseId) {
-      return ctx.reply("Exercise name required. Please specify an exercise before logging sets.");
+      return ctx.reply(
+        "Exercise name required. Please specify an exercise before logging sets."
+      );
     }
 
     const currentExercise = ctx.session.currentExerciseId;
@@ -272,7 +293,7 @@ bot.on("message:text", async (ctx) => {
     ctx.session.currentExerciseId = exercise.id;
 
     await ctx.reply(
-      `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`,
+      `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`
     );
   }
 });

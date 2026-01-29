@@ -6,7 +6,9 @@ Telegram Bot for tracking user's gym progression.
 
 - Node.js + TypeScript
 - [grammy](https://grammy.dev/) — Telegram Bot Framework
-- SQLite
+- Postgresql
+- Prisma
+- Redis
 
 ## Installation
 
@@ -28,6 +30,7 @@ npm install
 ```
 BOT_TOKEN=your_bot_token
 DATABASE_URL=your_db_url
+REDIS_URL=your_redis_url
 ```
 
 4. Create a migration to set up the database tables
