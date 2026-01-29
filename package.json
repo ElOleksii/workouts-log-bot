@@ -18,12 +18,14 @@
     "commands": "tsx scripts/setCommands.ts"
   },
   "dependencies": {
+    "@grammyjs/storage-redis": "^2.5.1",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "dotenv": "^17.2.3",
     "env": "^0.0.2",
     "express": "^5.2.1",
     "grammy": "^1.39.3",
+    "ioredis": "^5.9.2",
     "pg": "^8.17.2",
     "tsx": "^4.21.0"
   }
