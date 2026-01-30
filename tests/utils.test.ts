@@ -41,9 +41,10 @@ describe("formatDuration Utility", () => {
       expect(formatDuration(3600 * 2)).toBe("2 hours");
     });
 
-    test("ignores remaining minutes and seconds", () => {
+    test("hours + minutes", () => {
       const seconds = 3600 + 1800; // 1.5 hour
-      expect(formatDuration(seconds)).toBe("1 hour");
+      expect(formatDuration(seconds)).toBe("1 hour 30 minutes");
+      expect(formatDuration(seconds + 1200)).toBe("1 hour 50 minutes");
     });
   });
 });
