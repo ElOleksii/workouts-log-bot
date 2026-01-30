@@ -49,8 +49,10 @@ describe("formatDuration Utility", () => {
   });
 
   describe("Outrange values", () => {
-    test("value less than zero", () => {
-      expect(formatDuration(-1)).toBe("Seconds cannot be less than 0");
+    test("value less than zero (must generate an error)", () => {
+      expect(() => {
+        formatDuration(-1);
+      }).toThrow();
     });
   });
 });

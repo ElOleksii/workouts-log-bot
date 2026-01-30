@@ -41,6 +41,7 @@ bot.command("start", async (ctx) => {
       "/new - Start a new workout session\n" +
       "/finish - Complete the current workout session\n" +
       "/cancel - Cancel the current workout session\n" +
+      "/undo - Remove the last set or exercise if empty\n" +
       "/find - Retrieve workouts by date (format: DD.MM.YYYY, DD MM YYYY, or DD.MM.YY)\n\n" +
       "Usage Instructions:\n" +
       "1. Enter the exercise name (e.g., 'Pull-ups')\n" +
@@ -131,6 +132,71 @@ bot.command("cancel", async (ctx) => {
   ctx.session.currentExerciseId = null;
 
   await ctx.reply("Workout session has been canceled successfully.");
+});
+
+bot.command("undo", async (ctx) => {
+  if (!ctx.session.activeWorkoutId) {
+    return ctx.reply(
+      "No active workout session found. Use /new to start a new session."
+    );
+  }
+
+  if (!ctx.session.currentExerciseId) {
+    return ctx.reply(
+      "No exercise in progress. Please add an exercise first."
+    );
+  }
+
+  const currentExerciseId = ctx.session.currentExerciseId;
+
+  // Find all sets for the current exercise, ordered by id descending
+  const sets = await prisma.set.findMany({
+    where: {
+      exerciseId: currentExerciseId,
+    },
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  if (sets.length > 0) {
+    // Delete the last set
+    const lastSet = sets[0];
+    if (!lastSet) {
+      return ctx.reply("An error occurred. Please try again.");
+    }
+    
+    await prisma.set.delete({
+      where: {
+        id: lastSet.id,
+      },
+    });
+
+    await ctx.reply(
+      `Last set (${lastSet.weight}kg × ${lastSet.reps}) has been removed.`
+    );
+  } else {
+    // No sets exist, delete the exercise itself
+    const exercise = await prisma.exercise.findUnique({
+      where: {
+        id: currentExerciseId,
+      },
+    });
+
+    if (exercise) {
+      await prisma.exercise.delete({
+        where: {
+          id: currentExerciseId,
+        },
+      });
+
+      ctx.session.currentExerciseId = null;
+
+      await ctx.reply(
+        `Exercise "${exercise.name}" has been removed (no sets were recorded).`
+      );
+    }
+  }
 });
 
 bot.command("find", async (ctx) => {
