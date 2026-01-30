@@ -1,4 +1,8 @@
 export const formatDuration = (totalSeconds: number): string => {
+  if (totalSeconds < 0) {
+    return "Seconds cannot be less than 0";
+  }
+
   if (totalSeconds < 60) {
     return `${totalSeconds} second${totalSeconds === 1 ? "" : "s"}`;
   }

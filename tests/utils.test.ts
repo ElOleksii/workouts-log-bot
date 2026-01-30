@@ -47,4 +47,10 @@ describe("formatDuration Utility", () => {
       expect(formatDuration(seconds + 1200)).toBe("1 hour 50 minutes");
     });
   });
+
+  describe("Outrange values", () => {
+    test("value less than zero", () => {
+      expect(formatDuration(-1)).toBe("Seconds cannot be less than 0");
+    });
+  });
 });
