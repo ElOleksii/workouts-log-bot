@@ -1,4 +1,8 @@
 export const formatDuration = (totalSeconds: number): string => {
+  if (totalSeconds < 0) {
+    return "Seconds cannot be less than 0";
+  }
+
   if (totalSeconds < 60) {
     return `${totalSeconds} second${totalSeconds === 1 ? "" : "s"}`;
   }
@@ -6,9 +10,15 @@ export const formatDuration = (totalSeconds: number): string => {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
 
-  if (hours === 0) {
-    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  const parts: string[] = [];
+
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
   }
 
-  return `${hours} hour${hours === 1 ? "" : "s"}`;
+  if (minutes > 0) {
+    parts.push(`${minutes} minute${minutes === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" ");
 };
