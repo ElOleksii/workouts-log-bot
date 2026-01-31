@@ -1,4 +1,4 @@
-import { prisma } from "../prisma";
+import { prisma } from "../prisma.js";
 
 type undoResult =
   | { type: "SET_DELETED"; weight: number; reps: number }
