@@ -1,7 +1,7 @@
-import { calculateWorkoutTime } from "../queries";
-import { statsService } from "../services/stats.service";
-import type { MyContext } from "../types";
-import { formatDuration } from "../utils/utils";
+import { calculateWorkoutTime } from "../queries.js";
+import { statsService } from "../services/stats.service.js";
+import type { MyContext } from "../types.js";
+import { formatDuration } from "../utils/utils.js";
 
 export const statsHandler = {
   async handleFind(ctx: MyContext) {
