@@ -31,7 +31,7 @@ bot.use(
   session({
     initial,
     storage: new RedisAdapter({ instance: redisInstance, ttl: 3600 * 4 }),
-  })
+  }),
 );
 
 bot.command("start", async (ctx) => {
@@ -41,18 +41,19 @@ bot.command("start", async (ctx) => {
       "/new - Start a new workout session\n" +
       "/finish - Complete the current workout session\n" +
       "/cancel - Cancel the current workout session\n" +
+      "/undo - Remove the last set or exercise if empty\n" +
       "/find - Retrieve workouts by date (format: DD.MM.YYYY, DD MM YYYY, or DD.MM.YY)\n\n" +
       "Usage Instructions:\n" +
       "1. Enter the exercise name (e.g., 'Pull-ups')\n" +
       "2. Enter the weight and repetitions (e.g., '80, 12')\n" +
-      "3. Continue with additional exercises as needed\n"
+      "3. Continue with additional exercises as needed\n",
   );
 });
 
 bot.command("new", async (ctx) => {
   if (ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "A workout session is already in progress. Please complete or cancel the current session before starting a new one."
+      "A workout session is already in progress. Please complete or cancel the current session before starting a new one.",
     );
   }
 
@@ -73,14 +74,14 @@ bot.command("new", async (ctx) => {
   ctx.session.activeWorkoutId = workout.id;
 
   await ctx.reply(
-    'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").'
+    'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
   );
 });
 
 bot.command("finish", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "No active workout session detected. Use /new to begin a new session."
+      "No active workout session detected. Use /new to begin a new session.",
     );
   }
 
@@ -108,14 +109,14 @@ bot.command("finish", async (ctx) => {
 
   await ctx.reply(
     "Workout session successfully completed and recorded." +
-      `\nSession duration: ${formatDuration(duration)}`
+      `\nSession duration: ${formatDuration(duration)}`,
   );
 });
 
 bot.command("cancel", async (ctx) => {
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "No active workout session found. Use /new to start a new session."
+      "No active workout session found. Use /new to start a new session.",
     );
   }
 
@@ -133,6 +134,69 @@ bot.command("cancel", async (ctx) => {
   await ctx.reply("Workout session has been canceled successfully.");
 });
 
+bot.command("undo", async (ctx) => {
+  if (!ctx.session.activeWorkoutId) {
+    return ctx.reply(
+      "No active workout session found. Use /new to start a new session.",
+    );
+  }
+
+  if (!ctx.session.currentExerciseId) {
+    return ctx.reply("No exercise in progress. Please add an exercise first.");
+  }
+
+  const currentExerciseId = ctx.session.currentExerciseId;
+
+  // Find all sets for the current exercise, ordered by id descending
+  const sets = await prisma.set.findMany({
+    where: {
+      exerciseId: currentExerciseId,
+    },
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  if (sets.length > 0) {
+    // Delete the last set
+    const lastSet = sets[0];
+    if (!lastSet) {
+      return ctx.reply("An error occurred. Please try again.");
+    }
+
+    await prisma.set.delete({
+      where: {
+        id: lastSet.id,
+      },
+    });
+
+    await ctx.reply(
+      `Last set (${lastSet.weight}kg × ${lastSet.reps}) has been removed.`,
+    );
+  } else {
+    // No sets exist, delete the exercise itself
+    const exercise = await prisma.exercise.findUnique({
+      where: {
+        id: currentExerciseId,
+      },
+    });
+
+    if (exercise) {
+      await prisma.exercise.delete({
+        where: {
+          id: currentExerciseId,
+        },
+      });
+
+      ctx.session.currentExerciseId = null;
+
+      await ctx.reply(
+        `Exercise "${exercise.name}" has been removed (no sets were recorded).`,
+      );
+    }
+  }
+});
+
 bot.command("find", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId)
@@ -147,7 +211,7 @@ bot.command("find", async (ctx) => {
     const match = inputDate.match(dateRegex);
     if (!match) {
       return ctx.reply(
-        "Invalid date format. Please use one of the following formats: DD.MM.YYYY, DD MM YYYY, DD.MM.YY, or DD.MM"
+        "Invalid date format. Please use one of the following formats: DD.MM.YYYY, DD MM YYYY, DD.MM.YY, or DD.MM",
       );
     }
 
@@ -163,6 +227,22 @@ bot.command("find", async (ctx) => {
     }
 
     targetDate = new Date(year, month - 1, day);
+  } else {
+    const lastWorkout = await prisma.workout.findFirst({
+      where: {
+        userId,
+        isFinished: true,
+      },
+      orderBy: {
+        startTime: "desc",
+      },
+    });
+
+    if (!lastWorkout || !lastWorkout.startTime) {
+      return ctx.reply("No completed workouts found.");
+    }
+
+    targetDate = new Date(lastWorkout.startTime);
   }
 
   const startOfDay = new Date(targetDate);
@@ -253,7 +333,7 @@ bot.on("message:text", async (ctx) => {
 
   if (!ctx.session.activeWorkoutId) {
     return ctx.reply(
-      "No active workout session. Please use /new to begin a new session."
+      "No active workout session. Please use /new to begin a new session.",
     );
   }
 
@@ -263,7 +343,7 @@ bot.on("message:text", async (ctx) => {
   if (match && match[1] && match[2]) {
     if (!ctx.session.currentExerciseId) {
       return ctx.reply(
-        "Exercise name required. Please specify an exercise before logging sets."
+        "Exercise name required. Please specify an exercise before logging sets.",
       );
     }
 
@@ -293,7 +373,7 @@ bot.on("message:text", async (ctx) => {
     ctx.session.currentExerciseId = exercise.id;
 
     await ctx.reply(
-      `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`
+      `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`,
     );
   }
 });

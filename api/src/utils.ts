@@ -1,6 +1,6 @@
 export const formatDuration = (totalSeconds: number): string => {
   if (totalSeconds < 0) {
-    return "Seconds cannot be less than 0";
+    throw new Error("Duration cannot be negative");
   }
 
   if (totalSeconds < 60) {

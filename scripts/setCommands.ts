@@ -8,6 +8,7 @@ const commands = [
   { command: "finish", description: "Finish current workout" },
   { command: "cancel", description: "Cancel current workout" },
   { command: "find", description: "Find a workout(s) by date" },
+  { command: "undo", description: "Remove last set or exercise" },
 ];
 
 const setCommands = async () => {
