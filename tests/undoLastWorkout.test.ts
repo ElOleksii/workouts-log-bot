@@ -1,5 +1,5 @@
 import workoutService from "../api/src/services/workout.service";
-import { prisma } from "../api/src/prisma";
+import { prisma } from "../api/src/prisma.js";
 
 jest.mock("../api/src/prisma", () => ({
   prisma: {
