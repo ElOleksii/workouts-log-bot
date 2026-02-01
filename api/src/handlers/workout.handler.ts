@@ -1,7 +1,7 @@
-import type { MyContext } from "../types";
-import { calculateWorkoutTime } from "../queries";
-import { formatDuration } from "../utils/utils";
-import workoutService from "../services/workout.service";
+import type { MyContext } from "../types.js";
+import { calculateWorkoutTime } from "../queries.js";
+import { formatDuration } from "../utils/utils.js";
+import workoutService from "../services/workout.service.js";
 
 export const workoutHandler = {
   async handleNew(ctx: MyContext) {
