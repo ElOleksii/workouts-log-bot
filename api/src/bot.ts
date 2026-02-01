@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Bot, session } from "grammy";
-import IORedis from "ioredis";
+import { Redis } from "ioredis";
 import { RedisAdapter } from "@grammyjs/storage-redis";
 import type { MyContext, SessionData } from "./types.js";
 import { workoutHandler } from "./handlers/workout.handler.js";
@@ -10,7 +10,7 @@ if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined in environment variables");
 }
 
-const redisInstance = new IORedis(process.env.REDIS_URL);
+const redisInstance = new Redis(process.env.REDIS_URL);
 
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
 const initial = (): SessionData => {
