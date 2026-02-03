@@ -18,10 +18,14 @@ model Workout {
   isFinished Boolean @map("is_finished") @default(false)
   createdAt DateTime @map("created_at") @default(now())
 
+  templateId Int? @map("template_id")
+  template WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  
   exercises Exercise[] 
 
   @@map("workouts")
   
+
 } 
 
 model Exercise {
@@ -38,10 +42,44 @@ model Exercise {
 model Set {
   id Int @id @default(autoincrement())
   exerciseId Int @map("exercise_id")
-  reps Int
-  weight Int
+  reps Float
+  weight Float
   
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@map("sets")
+}
+
+model WorkoutTemplate {
+  id Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  name String 
+  createdAt DateTime @map("created_at") @default(now())
+
+  exercises ExerciseTemplate[]
+  workouts Workout[]
+
+  @@map("workout_template")  
+}
+
+model ExerciseTemplate {
+  id Int @id @default(autoincrement())
+  templateWorkoutId Int @map("template_workout_id")
+  name String
+  order Int @default(0)
+
+  template WorkoutTemplate @relation(fields: [templateWorkoutId], references: [id], onDelete: Cascade)
+  templateSets SetTemplate[] 
+
+  @@map("exercise_template")
+}
+
+model SetTemplate {
+  id Int @id @default(autoincrement())
+  templateExerciseId Int @map("template_exercise_id")
+  reps Float?
+  weight Float?
+
+  exercise ExerciseTemplate @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+  @@map("set_template")
 }
