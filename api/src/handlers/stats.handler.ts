@@ -1,7 +1,7 @@
 import { calculateWorkoutTime } from "../queries.js";
 import { statsService } from "../services/stats.service.js";
 import type { MyContext } from "../types.js";
-import { formatDuration } from "../utils/utils.js";
+import { formatDuration, formatWorkoutSummary } from "../utils/utils.js";
 
 export const statsHandler = {
   async handleFind(ctx: MyContext) {
@@ -39,44 +39,7 @@ export const statsHandler = {
           : `**Workout for ${date.toLocaleDateString()}:**\n`;
 
       for (const workout of workouts) {
-        const startTime = workout.startTime
-          ? new Date(workout.startTime).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "Unknown";
-        const endTime = workout.endTime
-          ? new Date(workout.endTime).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "...";
-
-        responseMessage += `**Workout at ${startTime} - ${endTime}**\n`;
-
-        if (workout.exercises.length === 0) {
-          responseMessage += `_No exercises recorded._\n`;
-        }
-
-        workout.exercises.forEach((exercise, index) => {
-          responseMessage += `\n${index + 1}. **${exercise.name}**\n`;
-
-          if (exercise.sets.length > 0) {
-            exercise.sets.forEach((set, setIndex) => {
-              responseMessage += `   - Set ${setIndex + 1}: ${set.weight}kg × ${
-                set.reps
-              }\n`;
-            });
-          } else {
-            responseMessage += `   (No sets recorded)\n`;
-          }
-        });
-
-        const duration = await calculateWorkoutTime(workout.id);
-
-        if (duration) {
-          responseMessage += `\nSession duration: ${formatDuration(duration)}\n\n`;
-        }
+        responseMessage += await formatWorkoutSummary(workout);
       }
 
       await ctx.reply(responseMessage, { parse_mode: "Markdown" });

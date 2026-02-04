@@ -5,6 +5,7 @@ import { RedisAdapter } from "@grammyjs/storage-redis";
 import type { MyContext, SessionData } from "./types.js";
 import { workoutHandler } from "./handlers/workout.handler.js";
 import { statsHandler } from "./handlers/stats.handler.js";
+import { templateHandler } from "./handlers/template.handler.js";
 
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined in environment variables");
@@ -47,6 +48,23 @@ bot.command("new", workoutHandler.handleNew);
 bot.command("finish", workoutHandler.handleFinish);
 bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
+
+bot.command("newTemplate", templateHandler.handleTemplateCreating);
+bot.callbackQuery(
+  "template-from-past",
+  templateHandler.handleTemplateAsPastWorkout,
+);
+bot.callbackQuery("template-manually");
+bot.callbackQuery(/^template-from-workout:(\d+)$/, async (ctx) => {
+  if (!ctx.match[1]) return;
+  const workoutId = parseInt(ctx.match[1]);
+
+  if (isNaN(workoutId)) {
+    return ctx.answerCallbackQuery("Некоректний ID тренування");
+  }
+
+  await templateHandler.handleCopyWorkout(ctx, workoutId);
+});
 
 bot.command("find", statsHandler.handleFind);
 

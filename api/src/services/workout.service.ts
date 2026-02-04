@@ -59,6 +59,41 @@ export const workoutService = {
     });
   },
 
+  async findLastWorkouts(userId: number, count: number = 5) {
+    return await prisma.workout.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+      orderBy: {
+        startTime: "desc",
+      },
+      take: count,
+    });
+  },
+
+  async getWorkoutById(workoutId: number) {
+    return await prisma.workout.findUnique({
+      where: { id: workoutId },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+          orderBy: {
+            id: "asc",
+          },
+        },
+      },
+    });
+  },
+
   async undoLastLog(exerciseId: number): Promise<undoResult> {
     const sets = await prisma.set.findMany({
       where: {
