@@ -53,7 +53,7 @@ export const formatWorkoutSummary = async (workout: any): Promise<string> => {
     text += `_No exercises recorded._\n`;
   }
 
-  workout.exercises?.forEach((exercise: WorkoutExercise, index: number) => {
+  workout.exercises?.forEach((exercise: any, index: number) => {
     text += `\n${index + 1}. **${exercise.name}**\n`;
 
     if (exercise.sets.length > 0) {
