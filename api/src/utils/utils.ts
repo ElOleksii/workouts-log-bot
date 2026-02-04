@@ -1,5 +1,4 @@
 import { calculateWorkoutTime } from "../queries.js";
-import type { WorkoutExercise, WorkoutWithDetails } from "../types.js";
 
 export const formatDuration = (totalSeconds: number): string => {
   if (totalSeconds < 0) {
