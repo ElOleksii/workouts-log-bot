@@ -19,6 +19,7 @@
     "postinstall": "prisma generate",
     "webhook": "tsx scripts/setWebhook.ts",
     "commands": "tsx scripts/setCommands.ts",
+    "init-service": "tsx scripts/initNewService",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
