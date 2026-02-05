@@ -18,6 +18,9 @@ const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
     currentExerciseId: null,
+    templateDraft: null,
+    editorMode: null,
+    editingIndex: null,
   };
 };
 
@@ -50,21 +53,7 @@ bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
 
 bot.command("newTemplate", templateHandler.handleTemplateCreating);
-bot.callbackQuery(
-  "template-from-past",
-  templateHandler.handleTemplateAsPastWorkout,
-);
-bot.callbackQuery("template-manually");
-bot.callbackQuery(/^template-from-workout:(\d+)$/, async (ctx) => {
-  if (!ctx.match[1]) return;
-  const workoutId = parseInt(ctx.match[1]);
-
-  if (isNaN(workoutId)) {
-    return ctx.answerCallbackQuery("Некоректний ID тренування");
-  }
-
-  await templateHandler.handleCopyWorkout(ctx, workoutId);
-});
+bot.on("callback_query", templateHandler.handleCallback);
 
 bot.command("find", statsHandler.handleFind);
 

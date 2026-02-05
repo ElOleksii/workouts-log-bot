@@ -59,15 +59,19 @@ export const workoutService = {
     });
   },
 
-  async findLastWorkouts(userId: number, count: number = 5) {
+  async findLastWorkouts(userId: number, count: number = 5, page: number = 0) {
     return await prisma.workout.findMany({
       where: {
         userId,
+        isFinished: true,
       },
       include: {
         exercises: {
+          orderBy: {
+            id: "asc",
+          },
           include: {
-            sets: true,
+            sets: { orderBy: { id: "asc" } },
           },
         },
       },
@@ -75,6 +79,7 @@ export const workoutService = {
         startTime: "desc",
       },
       take: count,
+      skip: page * count,
     });
   },
 

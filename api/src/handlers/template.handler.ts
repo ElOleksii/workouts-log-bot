@@ -3,52 +3,63 @@ import type { MyContext } from "../types.js";
 import workoutService from "../services/workout.service.js";
 import { formatWorkoutSummary } from "../utils/utils.js";
 
+const methodCreatingKeyboard = () =>
+  new InlineKeyboard()
+    .text("Manually", "tpl:manually")
+    .text("From past workouts", "tpl:from_past")
+    .row();
+
+const editingTemplateKeyboard = () =>
+  new InlineKeyboard()
+    .text("Rename")
+    .text("Add exercise")
+    .text("Add set")
+    .row()
+    .text("Remove exercise")
+    .text("Remove set")
+    .row()
+    .text("Save")
+    .text("Discard")
+    .row();
+
 export const templateHandler = {
   async handleTemplateCreating(ctx: MyContext) {
-    const keyboard = new InlineKeyboard()
-      .text("From the past workout", "template-from-past")
-      .text("Manually", "template-manually");
-
-    await ctx.reply("Choose how you want to create new template?", {
-      reply_markup: keyboard,
+    return ctx.reply("Choose a creating template option: ", {
+      reply_markup: methodCreatingKeyboard(),
     });
   },
 
-  async handleTemplateAsPastWorkout(ctx: MyContext) {
-    await ctx.answerCallbackQuery();
-    const userId = ctx.from?.id;
-    if (!userId) return;
+  async handleCallback(ctx: MyContext) {
+    const data = ctx.callbackQuery?.data;
+    if (!data) return;
 
-    const workouts = await workoutService.findLastWorkouts(userId);
+    ctx.answerCallbackQuery();
 
-    if (!workouts || workouts.length <= 0) {
-      await ctx.reply("You don't have any workouts yet.");
+    if (data === "tpl:manually") {
+      return ctx.editMessageText("Template", {
+        reply_markup: editingTemplateKeyboard(),
+      });
     }
 
-    const keyboard = new InlineKeyboard();
+    if (data === "tpl:from_past") {
+      const userId = ctx.from?.id;
+      if (!userId) return;
 
-    workouts.forEach((w) => {
-      const date = w.startTime?.toLocaleDateString();
-      keyboard
-        .text(`Workout for ${date}`, `template-from-workout:${w.id}`)
-        .row();
-    });
+      const lastWorkouts = await workoutService.findLastWorkouts(userId);
+      if (!lastWorkouts) return ctx.reply("You don't have any workouts");
 
-    await ctx.reply("Choose workout to create new template:", {
-      reply_markup: keyboard,
-    });
-  },
-  async handleCopyWorkout(ctx: MyContext, workoutId: number) {
-    const workout = await workoutService.getWorkoutById(workoutId);
+      const keyboard = new InlineKeyboard();
 
-    if (!workout) return ctx.answerCallbackQuery("Workout hasn't founded");
+      lastWorkouts.forEach((w) => {
+        const dataStr = w.startTime?.toLocaleDateString();
+        keyboard.text(`Workout for ${dataStr}`, "tpl:create").row();
+      });
 
-    const dateStr = workout.startTime
-      ? new Date(workout.startTime).toLocaleDateString()
-      : "Unknown data";
+      keyboard.text("Load more").text("Discard").row();
 
-    const defaultName = `Template for ${dateStr}\n\n`;
-
-    await ctx.reply(defaultName + (await formatWorkoutSummary(workout)));
+      return ctx.editMessageText("Choose a workout to create new template: ", {
+        reply_markup: keyboard,
+      });
+    }
   },
 };
