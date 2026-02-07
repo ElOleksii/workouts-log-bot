@@ -19,8 +19,8 @@ const initial = (): SessionData => {
     activeWorkoutId: null,
     currentExerciseId: null,
     templateDraft: null,
-    editorMode: null,
-    editingIndex: null,
+    templateStage: "idle",
+    templateCurrentExerciseIdx: null,
   };
 };
 
@@ -57,7 +57,11 @@ bot.on("callback_query", templateHandler.handleCallback);
 
 bot.command("find", statsHandler.handleFind);
 
-bot.on("message:text", workoutHandler.handleMessage);
+bot.on("message:text", async (ctx) => {
+  const handled = await templateHandler.handleMessage(ctx);
+  if (handled) return;
+  await workoutHandler.handleMessage(ctx);
+});
 
 bot.catch((err) => {
   console.error("Error inside bot logic:", err);

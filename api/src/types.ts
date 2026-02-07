@@ -1,10 +1,11 @@
 import type { Context, SessionFlavor } from "grammy";
 
 export type EditorMode =
-  | "MENU"
-  | "EDIT_EXERCISE"
-  | "EDIT_SET"
-  | "RENAME_TEMPLATE";
+  | "idle"
+  | "editing"
+  | "await_name"
+  | "await_exercise"
+  | "await_set";
 
 export interface TemplateDraft {
   name: string;
@@ -15,13 +16,14 @@ export interface TemplateDraft {
       weight: number;
     }>;
   }>;
+  sourceWorkoutId?: number;
 }
 export interface SessionData {
   activeWorkoutId: number | null;
   currentExerciseId: number | null;
   templateDraft: TemplateDraft | null;
-  editorMode: EditorMode | null;
-  editingIndex: number | null;
+  templateStage: EditorMode;
+  templateCurrentExerciseIdx: number | null;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;

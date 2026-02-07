@@ -1,5 +1,5 @@
 import { InlineKeyboard } from "grammy";
-import type { MyContext } from "../types.js";
+import type { MyContext, TemplateDraft } from "../types.js";
 import workoutService from "../services/workout.service.js";
 import { formatWorkoutSummary } from "../utils/utils.js";
 
@@ -11,20 +11,58 @@ const methodCreatingKeyboard = () =>
 
 const editingTemplateKeyboard = () =>
   new InlineKeyboard()
-    .text("Rename")
-    .text("Add exercise")
-    .text("Add set")
+    .text("Rename", "tpl:rename")
+    .text("Add exercise", "tpl:add_ex")
+    .text("Add set", "tpl:add_set")
     .row()
-    .text("Remove exercise")
-    .text("Remove set")
+    .text("Remove exercise", "tpl:remove_ex")
+    .text("Remove set", "tpl:remove_set")
     .row()
-    .text("Save")
-    .text("Discard")
+    .text("Save", "tpl:save")
+    .text("Discard", "tpl:discard")
     .row();
+
+const backKeyboard = () => new InlineKeyboard().text("Back", "tpl:back");
+
+const resetTemplateDraft = (ctx: MyContext) => {
+  ctx.session.templateDraft = null;
+  ctx.session.templateStage = "idle";
+  ctx.session.templateCurrentExerciseIdx = null;
+};
+
+const ensureTemplateDraft = (ctx: MyContext): TemplateDraft => {
+  if (!ctx.session.templateDraft) {
+    ctx.session.templateDraft = {
+      name: "New template",
+      exercises: [],
+    };
+  }
+  return ctx.session.templateDraft;
+};
+
+const formatTemplate = (draft: TemplateDraft): string => {
+  let output = `Template ${draft.name || "Unnamed"}`;
+  if (draft.exercises.length === 0) {
+    output += "\nNo exercises yet.";
+    return output;
+  }
+
+  draft.exercises.forEach((exercise, idx) => {
+    output += `\n${idx + 1}. ${exercise.name}\n`;
+    if (exercise.sets.length === 0) {
+      output += "       (no sets).\n";
+    }
+    exercise.sets.forEach((set, setIdx) => {
+      output += `   - Set ${setIdx}: ${set.weight} x ${set.reps}`;
+    });
+  });
+  return output.trimEnd();
+};
 
 export const templateHandler = {
   async handleTemplateCreating(ctx: MyContext) {
-    return ctx.reply("Choose a creating template option: ", {
+    resetTemplateDraft(ctx);
+    return ctx.reply("Choose how to create a template: ", {
       reply_markup: methodCreatingKeyboard(),
     });
   },
@@ -36,7 +74,9 @@ export const templateHandler = {
     ctx.answerCallbackQuery();
 
     if (data === "tpl:manually") {
-      return ctx.editMessageText("Template", {
+      const currentTemplate = ensureTemplateDraft(ctx);
+      ctx.session.templateStage = "idle";
+      return ctx.editMessageText(formatTemplate(currentTemplate), {
         reply_markup: editingTemplateKeyboard(),
       });
     }
@@ -46,13 +86,18 @@ export const templateHandler = {
       if (!userId) return;
 
       const lastWorkouts = await workoutService.findLastWorkouts(userId);
-      if (!lastWorkouts) return ctx.reply("You don't have any workouts");
+      if (!lastWorkouts || lastWorkouts.length === 0)
+        return ctx.editMessageText("You don't have any past workouts", {
+          reply_markup: methodCreatingKeyboard(),
+        });
 
       const keyboard = new InlineKeyboard();
 
       lastWorkouts.forEach((w) => {
         const dataStr = w.startTime?.toLocaleDateString();
-        keyboard.text(`Workout for ${dataStr}`, "tpl:create").row();
+        keyboard
+          .text(`Workout for ${dataStr}`, `tpl:create-from-workout:${w.id}`)
+          .row();
       });
 
       keyboard.text("Load more").text("Discard").row();
@@ -60,6 +105,58 @@ export const templateHandler = {
       return ctx.editMessageText("Choose a workout to create new template: ", {
         reply_markup: keyboard,
       });
+    }
+
+    if (data === "tpl:main_menu") {
+      return ctx.editMessageText("Choose how to create a template: ", {
+        reply_markup: methodCreatingKeyboard(),
+      });
+    }
+
+    if (data.startsWith("tpl:create-from-workout:")) {
+      await ctx.reply("Click");
+    }
+
+    if (data === "tpl:rename") {
+      if (!ctx.session.templateDraft) return;
+      ctx.editMessageText("Enter name for the template: ", {
+        reply_markup: backKeyboard(),
+      });
+      ctx.session.templateStage = "await_name";
+    }
+
+    if (data === "tpl:add_ex") {
+      if (!ctx.session.templateDraft) return;
+
+      ctx.editMessageText("Enter name for the new exercise: ", {
+        reply_markup: backKeyboard(),
+      });
+      ctx.session.templateStage = "await_exercise";
+    }
+  },
+  async handleMessage(ctx: MyContext) {
+    const text = ctx.message?.text;
+    if (!text) return;
+
+    const stage = ctx.session.templateStage;
+    if (stage === "await_name") {
+      const activeDraft = ensureTemplateDraft(ctx);
+      activeDraft.name = text;
+      await ctx.reply(formatTemplate(activeDraft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+      ctx.session.templateStage = "idle";
+      return true;
+    }
+
+    if (stage === "await_exercise") {
+      const activeDraft = ensureTemplateDraft(ctx);
+      activeDraft.exercises.push({ name: text, sets: [] });
+      await ctx.reply(formatTemplate(activeDraft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+      ctx.session.templateStage = "idle";
+      return true;
     }
   },
 };
