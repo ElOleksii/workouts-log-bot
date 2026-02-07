@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Bot, session } from "grammy";
+import { Bot, GrammyError, HttpError, session } from "grammy";
 import { Redis } from "ioredis";
 import { RedisAdapter } from "@grammyjs/storage-redis";
 import type { MyContext, SessionData } from "./types.js";
@@ -64,5 +64,19 @@ bot.on("message:text", async (ctx) => {
 });
 
 bot.catch((err) => {
-  console.error("Error inside bot logic:", err);
+  const ctx = err.ctx;
+  console.error(`Error while handling update ${ctx.update.update_id}:`);
+  const e = err.error;
+
+  if (e instanceof GrammyError) {
+    if (e.description.includes("query is too old")) {
+      console.warn("Ignoring old callback query (time expired).");
+      return;
+    }
+    console.error("Error in request:", e.description);
+  } else if (e instanceof HttpError) {
+    console.error("Could not contact Telegram:", e);
+  } else {
+    console.error("Unknown error:", e);
+  }
 });

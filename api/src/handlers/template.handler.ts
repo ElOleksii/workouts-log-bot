@@ -158,6 +158,23 @@ export const templateHandler = {
       });
       ctx.session.templateStage = "await_exercise";
     }
+
+    if (data === "tpl:add_set") {
+      if (!ctx.session.templateDraft) return;
+
+      ctx.reply("Enter weight and reps for a new set (e.g. 50 x 10): ", {
+        reply_markup: backKeyboard(),
+      });
+      ctx.session.templateStage = "await_set";
+    }
+
+    if (data === "tpl:back") {
+      ctx.session.templateStage = "idle";
+      const draft = ensureTemplateDraft(ctx);
+      return ctx.editMessageText(formatTemplate(draft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+    }
   },
   async handleMessage(ctx: MyContext) {
     const text = ctx.message?.text;
@@ -183,5 +200,10 @@ export const templateHandler = {
       ctx.session.templateStage = "idle";
       return true;
     }
+
+    // if (stage === "await_set") {
+    //   const activeDraft = ensureTemplateDraft(ctx);
+    //   activeDraft.exercises;
+    // }
   },
 };
