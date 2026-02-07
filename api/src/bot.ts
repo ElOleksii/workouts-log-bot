@@ -1,10 +1,11 @@
 import "dotenv/config";
-import { Bot, session } from "grammy";
+import { Bot, GrammyError, HttpError, session } from "grammy";
 import { Redis } from "ioredis";
 import { RedisAdapter } from "@grammyjs/storage-redis";
 import type { MyContext, SessionData } from "./types.js";
 import { workoutHandler } from "./handlers/workout.handler.js";
 import { statsHandler } from "./handlers/stats.handler.js";
+import { templateHandler } from "./handlers/template.handler.js";
 
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined in environment variables");
@@ -17,6 +18,9 @@ const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
     currentExerciseId: null,
+    templateDraft: null,
+    templateStage: "idle",
+    templateCurrentExerciseIdx: null,
   };
 };
 
@@ -48,10 +52,31 @@ bot.command("finish", workoutHandler.handleFinish);
 bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
 
+bot.command("newTemplate", templateHandler.handleTemplateCreating);
+bot.on("callback_query", templateHandler.handleCallback);
+
 bot.command("find", statsHandler.handleFind);
 
-bot.on("message:text", workoutHandler.handleMessage);
+bot.on("message:text", async (ctx) => {
+  const handled = await templateHandler.handleMessage(ctx);
+  if (handled) return;
+  await workoutHandler.handleMessage(ctx);
+});
 
 bot.catch((err) => {
-  console.error("Error inside bot logic:", err);
+  const ctx = err.ctx;
+  console.error(`Error while handling update ${ctx.update.update_id}:`);
+  const e = err.error;
+
+  if (e instanceof GrammyError) {
+    if (e.description.includes("query is too old")) {
+      console.warn("Ignoring old callback query (time expired).");
+      return;
+    }
+    console.error("Error in request:", e.description);
+  } else if (e instanceof HttpError) {
+    console.error("Could not contact Telegram:", e);
+  } else {
+    console.error("Unknown error:", e);
+  }
 });
