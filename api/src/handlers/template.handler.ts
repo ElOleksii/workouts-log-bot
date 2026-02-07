@@ -53,7 +53,7 @@ const formatTemplate = (draft: TemplateDraft): string => {
       output += "       (no sets).\n";
     }
     exercise.sets.forEach((set, setIdx) => {
-      output += `   - Set ${setIdx}: ${set.weight} x ${set.reps}`;
+      output += `   - Set ${setIdx + 1}: ${set.weight} x ${set.reps}\n`;
     });
   });
   return output.trimEnd();
@@ -114,7 +114,26 @@ export const templateHandler = {
     }
 
     if (data.startsWith("tpl:create-from-workout:")) {
-      await ctx.reply("Click");
+      const workoutId = data.split(":")[2];
+
+      if (!workoutId) return;
+
+      const workout = await workoutService.getWorkoutById(+workoutId);
+      if (!workout) return ctx.reply("Workout wasn't found.");
+
+      ctx.session.templateDraft = {
+        name: `Template from ${new Date(workout.startTime!).toLocaleDateString()}`,
+        exercises: workout.exercises.map((ex) => ({
+          name: ex.name,
+          sets: ex.sets.map((set) => ({ weight: set.weight, reps: set.reps })),
+        })),
+      };
+
+      ctx.session.templateStage = "idle";
+
+      return ctx.editMessageText(formatTemplate(ctx.session.templateDraft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
     }
 
     if (data === "tpl:rename") {
@@ -125,10 +144,16 @@ export const templateHandler = {
       ctx.session.templateStage = "await_name";
     }
 
+    if (data === "tpl:discard") {
+      resetTemplateDraft(ctx);
+
+      return ctx.editMessageText("Your template was discarded.");
+    }
+
     if (data === "tpl:add_ex") {
       if (!ctx.session.templateDraft) return;
 
-      ctx.editMessageText("Enter name for the new exercise: ", {
+      ctx.reply("Enter name for the new exercise: ", {
         reply_markup: backKeyboard(),
       });
       ctx.session.templateStage = "await_exercise";
