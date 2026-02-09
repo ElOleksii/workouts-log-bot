@@ -1,4 +1,4 @@
-import { formatDuration } from "../api/src/utils/utils.js";
+import { formatDuration } from "../src/utils/utils.js";
 
 describe("formatDuration Utility", () => {
   describe("Seconds handling", () => {

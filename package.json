@@ -13,7 +13,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "dev": "tsx watch api/dev.ts",
+    "dev": "tsx watch dev.ts",
     "start": "node build/api/index.js",
     "build": "tsc",
     "postinstall": "prisma generate",
