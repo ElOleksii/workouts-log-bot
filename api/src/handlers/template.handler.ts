@@ -195,8 +195,54 @@ export const templateHandler = {
       ctx.session.templateCurrentExerciseIdx = exerciseIdx;
       ctx.session.templateStage = "await_set";
 
-      ctx.editMessageText("Enter weight and reps (e.g. 50 10).", {
+      return ctx.editMessageText("Enter weight and reps (e.g. 50 10).", {
         reply_markup: backKeyboard(),
+      });
+    }
+
+    if (data === "tpl:remove_ex") {
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      const keyboard = new InlineKeyboard();
+
+      draft.exercises.forEach((ex, idx) => {
+        keyboard.text(ex.name, `tpl:remove_ex:${idx}`).row();
+      });
+
+      return ctx.editMessageText("Choose an exercise to remove.", {
+        reply_markup: keyboard,
+      });
+    }
+
+    if (data.includes("tpl:remove_ex:")) {
+      const exerciseIdx = Number(data.split(":")[2]);
+      let draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      draft.exercises = draft.exercises.filter(
+        (ex, idx) => exerciseIdx !== idx,
+      );
+
+      return ctx.editMessageText(formatTemplate(draft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+    }
+
+    if (data === "tpl:remove_set") {
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      const keyboard = new InlineKeyboard();
+
+      draft.exercises.forEach((ex) => {
+        keyboard.text(ex.name, "tpl:remove_set:").row();
       });
     }
 
