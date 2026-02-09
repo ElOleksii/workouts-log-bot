@@ -7,15 +7,17 @@ export type EditorMode =
   | "await_exercise"
   | "await_set";
 
+export interface TemplateDraftSet {
+  reps: number;
+  weight: number;
+}
+export interface TemplateDraftExercise {
+  name: string;
+  sets: TemplateDraftSet[];
+}
 export interface TemplateDraft {
   name: string;
-  exercises: Array<{
-    name: string;
-    sets: Array<{
-      reps: number;
-      weight: number;
-    }>;
-  }>;
+  exercises: TemplateDraftExercise[];
   sourceWorkoutId?: number;
 }
 export interface SessionData {

@@ -2,6 +2,7 @@ import { InlineKeyboard } from "grammy";
 import type { MyContext, TemplateDraft } from "../types.js";
 import workoutService from "../services/workout.service.js";
 import { formatWorkoutSummary } from "../utils/utils.js";
+import { templateService } from "../services/template.service.js";
 
 const methodCreatingKeyboard = () =>
   new InlineKeyboard()
@@ -241,8 +242,62 @@ export const templateHandler = {
 
       const keyboard = new InlineKeyboard();
 
-      draft.exercises.forEach((ex) => {
-        keyboard.text(ex.name, "tpl:remove_set:").row();
+      draft.exercises.forEach((ex, idx) => {
+        keyboard.text(ex.name, `tpl:ex_set_to_remove:${idx}`).row();
+      });
+
+      return ctx.editMessageText("Choose exercise to remove the set.", {
+        reply_markup: keyboard,
+      });
+    }
+
+    if (data.includes("tpl:ex_set_to_remove:")) {
+      const exerciseIdx = Number(data.split(":")[2]);
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      const currentExercise = draft.exercises[exerciseIdx];
+      if (currentExercise?.sets.length === 0) {
+        return ctx.reply(
+          `${currentExercise?.name} don't contain any sets yet.`,
+        );
+      }
+      const keyboard = new InlineKeyboard();
+      currentExercise?.sets.forEach((set, idx) => {
+        keyboard
+          .text(
+            `${idx + 1}. ${set.weight} x ${set.reps}`,
+            `tpl:remove_set:${exerciseIdx}:${idx}`,
+          )
+          .row();
+      });
+
+      return ctx.editMessageText("Choose set to remove.", {
+        reply_markup: keyboard,
+      });
+    }
+
+    if (data.startsWith("tpl:remove_set:")) {
+      const exerciseIdx = Number(data.split(":")[2]);
+      const setIdx = Number(data.split(":")[3]);
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      let currentExercise = draft.exercises[exerciseIdx];
+      if (currentExercise === undefined) {
+        return;
+      }
+
+      currentExercise.sets = currentExercise.sets.filter(
+        (set, idx) => idx !== setIdx,
+      );
+
+      return ctx.editMessageText(formatTemplate(draft), {
+        reply_markup: editingTemplateKeyboard(),
       });
     }
 
@@ -253,10 +308,39 @@ export const templateHandler = {
         reply_markup: editingTemplateKeyboard(),
       });
     }
+
+    if (data === "tpl:save") {
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      if (!draft.name) {
+        ctx.session.templateStage = "await_name";
+        return ctx.editMessageText(
+          "Provide the name for a template before saving",
+          {
+            reply_markup: backKeyboard(),
+          },
+        );
+      }
+
+      const userId = ctx.from?.id;
+      if (!userId) return;
+
+      templateService.createTemplate(userId, draft.name, draft.exercises);
+      resetTemplateDraft(ctx);
+
+      return ctx.editMessageText("Template was successfuly created.");
+    }
   },
-  async handleMessage(ctx: MyContext) {
+  async handleMessage(ctx: MyContext): Promise<Boolean> {
     const text = ctx.message?.text;
-    if (!text) return;
+    if (!text) return false;
+
+    if (ctx.session.templateStage === "idle" || !ctx.session.templateDraft) {
+      return false;
+    }
 
     const stage = ctx.session.templateStage;
     if (stage === "await_name") {
@@ -297,7 +381,6 @@ export const templateHandler = {
         const weight = parseFloat(match[1]);
         const reps = parseInt(match[2]);
         const currentExerciseIdx = ctx.session.templateCurrentExerciseIdx;
-        console.log(currentExerciseIdx);
 
         if (currentExerciseIdx === null) return true;
 
@@ -314,5 +397,7 @@ export const templateHandler = {
       ctx.session.templateStage = "editing";
       return true;
     }
+
+    return false;
   },
 };

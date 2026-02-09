@@ -52,7 +52,7 @@ bot.command("finish", workoutHandler.handleFinish);
 bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
 
-bot.command("newTemplate", templateHandler.handleTemplateCreating);
+bot.command("new_template", templateHandler.handleTemplateCreating);
 bot.on("callback_query", templateHandler.handleCallback);
 
 bot.command("find", statsHandler.handleFind);

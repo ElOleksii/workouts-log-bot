@@ -9,6 +9,10 @@ const commands = [
   { command: "cancel", description: "Cancel current workout" },
   { command: "find", description: "Find a workout(s) by date" },
   { command: "undo", description: "Remove last set or exercise" },
+  {
+    command: "new_template",
+    description: "Add template to use for repeating workouts",
+  },
 ];
 
 const setCommands = async () => {
