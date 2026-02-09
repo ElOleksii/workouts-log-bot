@@ -5,6 +5,7 @@ import { RedisAdapter } from "@grammyjs/storage-redis";
 import type { MyContext, SessionData } from "./types.js";
 import { workoutHandler } from "./handlers/workout.handler.js";
 import { statsHandler } from "./handlers/stats.handler.js";
+import { templateHandler } from "./handlers/template.handler.js";
 
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined in environment variables");
@@ -17,6 +18,9 @@ const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
     currentExerciseId: null,
+    templateDraft: null,
+    templateStage: "idle",
+    templateCurrentExerciseIndex: null,
   };
 };
 
@@ -35,6 +39,7 @@ bot.command("start", async (ctx) => {
       "/finish - Complete the current workout session\n" +
       "/cancel - Cancel the current workout session\n" +
       "/undo - Remove the last set or exercise if empty\n" +
+      "/template - Create workout templates\n" +
       "/find - Retrieve workouts by date (format: DD.MM.YYYY, DD MM YYYY, or DD.MM.YY)\n\n" +
       "Usage Instructions:\n" +
       "1. Enter the exercise name (e.g., 'Pull-ups')\n" +
@@ -47,10 +52,17 @@ bot.command("new", workoutHandler.handleNew);
 bot.command("finish", workoutHandler.handleFinish);
 bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
+bot.command("template", templateHandler.handleStart);
 
 bot.command("find", statsHandler.handleFind);
 
-bot.on("message:text", workoutHandler.handleMessage);
+bot.on("callback_query:data", templateHandler.handleCallback);
+
+bot.on("message:text", async (ctx) => {
+  const handled = await templateHandler.handleMessage(ctx);
+  if (handled) return;
+  await workoutHandler.handleMessage(ctx);
+});
 
 bot.catch((err) => {
   console.error("Error inside bot logic:", err);

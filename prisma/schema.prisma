@@ -45,3 +45,36 @@ model Set {
 
   @@map("sets")
 }
+
+model Template {
+  id Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  name String
+  createdAt DateTime @map("created_at") @default(now())
+
+  exercises TemplateExercise[]
+
+  @@map("templates")
+}
+
+model TemplateExercise {
+  id Int @id @default(autoincrement())
+  templateId Int @map("template_id")
+  name String
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  sets TemplateSet[]
+
+  @@map("template_exercises")
+}
+
+model TemplateSet {
+  id Int @id @default(autoincrement())
+  templateExerciseId Int @map("template_exercise_id")
+  reps Int
+  weight Int
+
+  exercise TemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+
+  @@map("template_sets")
+}
