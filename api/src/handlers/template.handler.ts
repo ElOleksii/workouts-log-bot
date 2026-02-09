@@ -59,6 +59,13 @@ const formatTemplate = (draft: TemplateDraft): string => {
   return output.trimEnd();
 };
 
+const handleSetInput = (
+  draft: TemplateDraft,
+  exerciseIdx: number | null,
+  input: string,
+): exerciseIdx is number =>
+  exerciseIdx !== null && !!draft.exercises[exerciseIdx];
+
 export const templateHandler = {
   async handleTemplateCreating(ctx: MyContext) {
     resetTemplateDraft(ctx);
@@ -82,6 +89,7 @@ export const templateHandler = {
     }
 
     if (data === "tpl:from_past") {
+      resetTemplateDraft(ctx);
       const userId = ctx.from?.id;
       if (!userId) return;
 
@@ -95,9 +103,7 @@ export const templateHandler = {
 
       lastWorkouts.forEach((w) => {
         const dataStr = w.startTime?.toLocaleDateString();
-        keyboard
-          .text(`Workout for ${dataStr}`, `tpl:create-from-workout:${w.id}`)
-          .row();
+        keyboard.text(`Workout for ${dataStr}`, `tpl:pick:${w.id}`).row();
       });
 
       keyboard.text("Load more").text("Discard").row();
@@ -113,7 +119,7 @@ export const templateHandler = {
       });
     }
 
-    if (data.startsWith("tpl:create-from-workout:")) {
+    if (data.startsWith("tpl:pick:")) {
       const workoutId = data.split(":")[2];
 
       if (!workoutId) return;
@@ -121,15 +127,18 @@ export const templateHandler = {
       const workout = await workoutService.getWorkoutById(+workoutId);
       if (!workout) return ctx.reply("Workout wasn't found.");
 
-      ctx.session.templateDraft = {
+      const draft: TemplateDraft = {
         name: `Template from ${new Date(workout.startTime!).toLocaleDateString()}`,
         exercises: workout.exercises.map((ex) => ({
           name: ex.name,
           sets: ex.sets.map((set) => ({ weight: set.weight, reps: set.reps })),
         })),
+        sourceWorkoutId: +workoutId,
       };
 
-      ctx.session.templateStage = "idle";
+      ctx.session.templateDraft = draft;
+      ctx.session.templateStage = "editing";
+      ctx.session.templateCurrentExerciseIdx = null;
 
       return ctx.editMessageText(formatTemplate(ctx.session.templateDraft), {
         reply_markup: editingTemplateKeyboard(),
@@ -160,12 +169,35 @@ export const templateHandler = {
     }
 
     if (data === "tpl:add_set") {
-      if (!ctx.session.templateDraft) return;
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
 
-      ctx.reply("Enter weight and reps for a new set (e.g. 50 x 10): ", {
+      const keyboard = new InlineKeyboard();
+      draft.exercises.forEach((ex, idx) => {
+        keyboard.text(ex.name, `tpl:add_set_to_ex:${idx}`).row();
+      });
+      keyboard.text("Back", "tpl:back");
+
+      ctx.editMessageText("Choose an exercise to add a set", {
+        reply_markup: keyboard,
+      });
+    }
+
+    if (data.includes("tpl:add_set_to_ex:")) {
+      const exerciseIdx = Number(data.split(":")[2]);
+      const draft = ctx.session.templateDraft;
+      if (!draft || draft.exercises.length === 0) {
+        return ctx.reply("No exercises yet. Add an exercise first.");
+      }
+
+      ctx.session.templateCurrentExerciseIdx = exerciseIdx;
+      ctx.session.templateStage = "await_set";
+
+      ctx.editMessageText("Enter weight and reps (e.g. 50 10).", {
         reply_markup: backKeyboard(),
       });
-      ctx.session.templateStage = "await_set";
     }
 
     if (data === "tpl:back") {
@@ -187,7 +219,7 @@ export const templateHandler = {
       await ctx.reply(formatTemplate(activeDraft), {
         reply_markup: editingTemplateKeyboard(),
       });
-      ctx.session.templateStage = "idle";
+      ctx.session.templateStage = "editing";
       return true;
     }
 
@@ -197,13 +229,44 @@ export const templateHandler = {
       await ctx.reply(formatTemplate(activeDraft), {
         reply_markup: editingTemplateKeyboard(),
       });
-      ctx.session.templateStage = "idle";
+      ctx.session.templateStage = "editing";
       return true;
     }
 
-    // if (stage === "await_set") {
-    //   const activeDraft = ensureTemplateDraft(ctx);
-    //   activeDraft.exercises;
-    // }
+    if (stage === "await_set") {
+      const activeDraft = ensureTemplateDraft(ctx);
+      const handled = handleSetInput(
+        activeDraft,
+        ctx.session.templateCurrentExerciseIdx,
+        text,
+      );
+      if (!handled) {
+        await ctx.reply("Please provide weight and reps (e.g., 50 10)");
+        return true;
+      }
+
+      const setRegex = /^(\d+(?:\.\d+)?)[,\s]+(\d+)$/;
+      const match = text.match(setRegex);
+      if (match && match[1] && match[2]) {
+        const weight = parseFloat(match[1]);
+        const reps = parseInt(match[2]);
+        const currentExerciseIdx = ctx.session.templateCurrentExerciseIdx;
+        console.log(currentExerciseIdx);
+
+        if (currentExerciseIdx === null) return true;
+
+        const currentExercise = activeDraft.exercises[currentExerciseIdx];
+        currentExercise?.sets.push({ reps, weight });
+      } else {
+        await ctx.reply("Please provide weight and reps (e.g., 50 10)");
+        return true;
+      }
+
+      await ctx.reply(formatTemplate(activeDraft), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+      ctx.session.templateStage = "editing";
+      return true;
+    }
   },
 };
