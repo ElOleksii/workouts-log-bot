@@ -107,7 +107,7 @@ export const templateHandler = {
         keyboard.text(`Workout for ${dataStr}`, `tpl:pick:${w.id}`).row();
       });
 
-      keyboard.text("Load more").text("Discard").row();
+      keyboard.text("Load more").text("Discard", "tpl:discard").row();
 
       return ctx.editMessageText("Choose a workout to create new template: ", {
         reply_markup: keyboard,
