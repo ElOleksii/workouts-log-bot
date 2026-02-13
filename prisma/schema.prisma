@@ -19,6 +19,9 @@ model Workout {
   createdAt DateTime @map("created_at") @default(now())
 
   exercises Exercise[] 
+  sourceTemplateId Int?
+  sourceTemplate Template? @relation(fields: [sourceTemplateId], references: [id])
+  
 
   @@map("workouts")
   
@@ -53,6 +56,7 @@ model Template {
   createdAt DateTime @map("created_at") @default(now())
 
   exercises TemplateExercise[]
+  workout Workout[]
 
   @@map("templates")
 }

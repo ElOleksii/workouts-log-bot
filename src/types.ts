@@ -16,6 +16,7 @@ export interface TemplateDraftExercise {
   sets: TemplateDraftSet[];
 }
 export interface TemplateDraft {
+  id?: number;
   name: string;
   exercises: TemplateDraftExercise[];
   sourceWorkoutId?: number;
