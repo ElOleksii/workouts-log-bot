@@ -56,6 +56,13 @@ export const templateService = {
       });
     }
   },
+  async deleteTemplate(templateId: number) {
+    await prisma.template.delete({
+      where: {
+        id: templateId,
+      },
+    });
+  },
   async findAllTemplates(userId: number) {
     return prisma.template.findMany({
       where: {

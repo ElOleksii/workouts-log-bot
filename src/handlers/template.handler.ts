@@ -10,8 +10,8 @@ const methodCreatingKeyboard = () =>
     .text("From past workouts", "tpl:from_past")
     .row();
 
-const editingTemplateKeyboard = () =>
-  new InlineKeyboard()
+const editingTemplateKeyboard = (draft: TemplateDraft) => {
+  const keyboard = new InlineKeyboard()
     .text("Rename", "tpl:rename")
     .text("Add exercise", "tpl:add_ex")
     .text("Add set", "tpl:add_set")
@@ -20,9 +20,14 @@ const editingTemplateKeyboard = () =>
     .text("Remove set", "tpl:remove_set")
     .row()
     .text("Save", "tpl:save")
-    .text("Discard", "tpl:discard")
-    .row();
+    .text("Discard", "tpl:discard");
 
+  if (draft.id) {
+    keyboard.text("Delete", "tpl:delete").row();
+  }
+
+  return keyboard;
+};
 const backKeyboard = () => new InlineKeyboard().text("Back", "tpl:back");
 
 const resetTemplateDraft = (ctx: MyContext) => {
@@ -110,7 +115,7 @@ export const templateHandler = {
       const currentTemplate = ensureTemplateDraft(ctx);
       ctx.session.templateStage = "idle";
       return ctx.editMessageText(formatTemplate(currentTemplate), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(currentTemplate),
       });
     }
 
@@ -133,7 +138,7 @@ export const templateHandler = {
       ctx.session.templateCurrentExerciseIdx = null;
 
       return ctx.editMessageText(formatTemplate(draft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(draft),
       });
     }
 
@@ -190,7 +195,7 @@ export const templateHandler = {
       ctx.session.templateCurrentExerciseIdx = null;
 
       return ctx.editMessageText(formatTemplate(ctx.session.templateDraft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(draft),
       });
     }
 
@@ -278,7 +283,7 @@ export const templateHandler = {
       );
 
       return ctx.editMessageText(formatTemplate(draft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(draft),
       });
     }
 
@@ -345,7 +350,7 @@ export const templateHandler = {
       );
 
       return ctx.editMessageText(formatTemplate(draft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(draft),
       });
     }
 
@@ -353,7 +358,7 @@ export const templateHandler = {
       ctx.session.templateStage = "idle";
       const draft = ensureTemplateDraft(ctx);
       return ctx.editMessageText(formatTemplate(draft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(draft),
       });
     }
 
@@ -395,6 +400,20 @@ export const templateHandler = {
         return ctx.editMessageText("Template was successfuly created.");
       }
     }
+
+    if (data === "tpl:delete") {
+      const currentTemplateId = ctx.session.templateDraft?.id;
+      if (!currentTemplateId) return;
+
+      try {
+        await templateService.deleteTemplate(currentTemplateId);
+        ctx.editMessageText("The template was deleted successfully.");
+        resetTemplateDraft(ctx);
+      } catch (e) {
+        console.log(e);
+        return ctx.reply("Couldn't able to delete this template.");
+      }
+    }
   },
   async handleMessage(ctx: MyContext): Promise<Boolean> {
     const text = ctx.message?.text;
@@ -409,7 +428,7 @@ export const templateHandler = {
       const activeDraft = ensureTemplateDraft(ctx);
       activeDraft.name = text;
       await ctx.reply(formatTemplate(activeDraft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(activeDraft),
       });
       ctx.session.templateStage = "editing";
       return true;
@@ -419,7 +438,7 @@ export const templateHandler = {
       const activeDraft = ensureTemplateDraft(ctx);
       activeDraft.exercises.push({ name: text, sets: [] });
       await ctx.reply(formatTemplate(activeDraft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(activeDraft),
       });
       ctx.session.templateStage = "editing";
       return true;
@@ -454,7 +473,7 @@ export const templateHandler = {
       }
 
       await ctx.reply(formatTemplate(activeDraft), {
-        reply_markup: editingTemplateKeyboard(),
+        reply_markup: editingTemplateKeyboard(activeDraft),
       });
       ctx.session.templateStage = "editing";
       return true;
