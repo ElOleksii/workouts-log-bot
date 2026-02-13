@@ -75,6 +75,31 @@ export const templateHandler = {
     });
   },
 
+  async handleManageTemplates(ctx: MyContext) {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    const keyboard = new InlineKeyboard();
+
+    const templates = await templateService.findAllTemplates(userId);
+
+    if (!templates || templates.length === 0) {
+      return ctx.reply(
+        "You don't have any templates yet. You can create one using /new_template.",
+      );
+    }
+
+    templates.forEach((tmpl) => {
+      keyboard.text(`${tmpl.name}`, `tpl:mng_tpl:${tmpl.id}`).row();
+    });
+
+    keyboard.text("Discard", "tpl:discard").row();
+
+    return ctx.reply("Choose a template from the list to manage it.", {
+      reply_markup: keyboard,
+    });
+  },
+
   async handleCallback(ctx: MyContext) {
     const data = ctx.callbackQuery?.data;
     if (!data) return;
@@ -85,6 +110,29 @@ export const templateHandler = {
       const currentTemplate = ensureTemplateDraft(ctx);
       ctx.session.templateStage = "idle";
       return ctx.editMessageText(formatTemplate(currentTemplate), {
+        reply_markup: editingTemplateKeyboard(),
+      });
+    }
+
+    if (data.startsWith("tpl:mng_tpl:")) {
+      console.log(data);
+      const templateId = Number(data.split(":")[2]);
+      if (!templateId) return;
+
+      const template = await templateService.findTemplateById(templateId);
+      if (!template) return ctx.reply("Couldn't find the template.");
+
+      const draft: TemplateDraft = {
+        id: template.id,
+        name: template.name,
+        exercises: template.exercises,
+      };
+
+      ctx.session.templateDraft = draft;
+      ctx.session.templateStage = "editing";
+      ctx.session.templateCurrentExerciseIdx = null;
+
+      return ctx.editMessageText(formatTemplate(draft), {
         reply_markup: editingTemplateKeyboard(),
       });
     }
@@ -328,10 +376,24 @@ export const templateHandler = {
       const userId = ctx.from?.id;
       if (!userId) return;
 
-      templateService.createTemplate(userId, draft.name, draft.exercises);
-      resetTemplateDraft(ctx);
+      if (draft.id) {
+        await templateService.updateTemplate(
+          draft.id,
+          draft.name,
+          draft.exercises,
+        );
+        resetTemplateDraft(ctx);
+        return ctx.editMessageText("Template was successfuly updated.");
+      } else {
+        await templateService.createTemplate(
+          userId,
+          draft.name,
+          draft.exercises,
+        );
+        resetTemplateDraft(ctx);
 
-      return ctx.editMessageText("Template was successfuly created.");
+        return ctx.editMessageText("Template was successfuly created.");
+      }
     }
   },
   async handleMessage(ctx: MyContext): Promise<Boolean> {

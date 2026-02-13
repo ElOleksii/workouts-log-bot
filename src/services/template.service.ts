@@ -25,4 +25,66 @@ export const templateService = {
       },
     });
   },
+  async updateTemplate(
+    templateId: number,
+    name: string,
+    exercises: TemplateDraftExercise[],
+  ) {
+    await prisma.template.update({
+      where: {
+        id: templateId,
+      },
+      data: { name },
+    });
+
+    await prisma.templateExercise.deleteMany({
+      where: { templateId },
+    });
+
+    for (const ex of exercises) {
+      await prisma.templateExercise.create({
+        data: {
+          templateId,
+          name: ex.name,
+          sets: {
+            create: ex.sets.map((set) => ({
+              weight: set.weight,
+              reps: set.reps,
+            })),
+          },
+        },
+      });
+    }
+  },
+  async findAllTemplates(userId: number) {
+    return prisma.template.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  },
+  async findTemplateById(templateId: number) {
+    return prisma.template.findUnique({
+      where: {
+        id: templateId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+    });
+  },
 };

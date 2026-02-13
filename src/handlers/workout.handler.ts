@@ -2,6 +2,8 @@ import type { MyContext } from "../types.js";
 import { calculateWorkoutTime } from "../queries.js";
 import { formatDuration } from "../utils/utils.js";
 import workoutService from "../services/workout.service.js";
+import { InlineKeyboard } from "grammy";
+import { templateService } from "../services/template.service.js";
 
 export const workoutHandler = {
   async handleNew(ctx: MyContext) {
@@ -11,24 +13,63 @@ export const workoutHandler = {
       );
     }
 
-    if (!ctx.from?.id) {
-      return ctx.reply(
-        "Unable to verify user identification. Please try again.",
-      );
-    }
+    const keyboard = new InlineKeyboard()
+      .text("With template", "wrk:with_tmpl")
+      .row()
+      .text("Without template", "wrk:without_tmpl")
+      .row();
 
-    try {
+    await ctx.reply("How you want to start new workout?", {
+      reply_markup: keyboard,
+    });
+  },
+
+  async handleCallback(ctx: MyContext) {
+    const data = ctx.callbackQuery?.data;
+    if (!data) return;
+
+    ctx.answerCallbackQuery();
+
+    if (data === "wrk:with_tmpl") {
+      if (ctx.session.activeWorkoutId) {
+        return ctx.reply(
+          "A workout session is already in progress. Please complete or cancel the current session before starting a new one.",
+        );
+      }
+
+      const keyboard = new InlineKeyboard();
+
       const userId = ctx.from?.id;
-      const workout = await workoutService.createWorkout(userId);
+      if (!userId) return;
 
-      ctx.session.activeWorkoutId = workout.id;
+      const templates = await templateService.findAllTemplates(userId);
 
-      await ctx.reply(
-        'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
-      );
-    } catch (error) {
-      console.error(error);
-      await ctx.reply("Failed to start workout.");
+      templates.forEach((tmpl) => keyboard.text(tmpl.name, "wrk:tmpl").row());
+
+      return ctx.reply("Choose a template to start a workout.", {
+        reply_markup: keyboard,
+      });
+    }
+    if (data === "wrk:without_tmpl") {
+      if (!ctx.from?.id) {
+        return ctx.reply(
+          "Unable to verify user identification. Please try again.",
+        );
+      }
+
+      try {
+        const userId = ctx.from?.id;
+        const workout = await workoutService.createWorkout(userId);
+
+        ctx.session.activeWorkoutId = workout.id;
+
+        await ctx.reply(
+          'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
+        );
+      } catch (error) {
+        console.error(error);
+        await ctx.reply("Failed to start workout.");
+      }
     }
   },
 

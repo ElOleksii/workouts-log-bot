@@ -51,9 +51,12 @@ bot.command("new", workoutHandler.handleNew);
 bot.command("finish", workoutHandler.handleFinish);
 bot.command("cancel", workoutHandler.handleCancel);
 bot.command("undo", workoutHandler.handleUndo);
+bot.callbackQuery(/^wrk:/, workoutHandler.handleCallback);
 
 bot.command("new_template", templateHandler.handleTemplateCreating);
-bot.on("callback_query", templateHandler.handleCallback);
+// bot.command("find_templates", templateHandler.handleFind);
+bot.command("manage_templates", templateHandler.handleManageTemplates);
+bot.callbackQuery(/^tpl:/, templateHandler.handleCallback);
 
 bot.command("find", statsHandler.handleFind);
 
