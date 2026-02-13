@@ -13,6 +13,10 @@ const commands = [
     command: "new_template",
     description: "Add template to use for repeating workouts",
   },
+  {
+    command: "manage_templates",
+    description: "Allows to edit your templates.",
+  },
 ];
 
 const setCommands = async () => {
