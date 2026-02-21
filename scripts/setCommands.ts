@@ -17,6 +17,10 @@ const commands = [
     command: "manage_templates",
     description: "Allows to edit your templates.",
   },
+  {
+    command: "/get_workouts",
+    description: "Display list of your workouts to get info.",
+  },
 ];
 
 const setCommands = async () => {
