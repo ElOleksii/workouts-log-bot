@@ -61,6 +61,36 @@ export const statsService = {
     };
   },
 
+  async findAllWorkouts(userId: number, take: number = 5, cursorId?: number) {
+    const workouts = await prisma.workout.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+      orderBy: [{ startTime: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    });
+
+    let nextCursor: number | null = null;
+
+    if (workouts.length > take) {
+      const nextItem = workouts.pop();
+      nextCursor = nextItem?.id ?? null;
+    }
+
+    return {
+      workouts,
+      nextCursor,
+    };
+  },
+
   parseDate(input: string): Date | null {
     const dateRegex = /^(\d{1,2})([.\s])(\d{1,2})(?:\2(\d{2}|\d{4}))?$/;
 

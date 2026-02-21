@@ -13,6 +13,14 @@ const commands = [
     command: "new_template",
     description: "Add template to use for repeating workouts",
   },
+  {
+    command: "manage_templates",
+    description: "Allows to edit your templates.",
+  },
+  {
+    command: "/get_workouts",
+    description: "Display list of your workouts to get info.",
+  },
 ];
 
 const setCommands = async () => {

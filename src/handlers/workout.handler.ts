@@ -44,7 +44,9 @@ export const workoutHandler = {
 
       const templates = await templateService.findAllTemplates(userId);
 
-      templates.forEach((tmpl) => keyboard.text(tmpl.name, "wrk:tmpl").row());
+      templates.forEach((tmpl) =>
+        keyboard.text(tmpl.name, `wrk:crnt_tmpl:${tmpl.id}`).row(),
+      );
 
       return ctx.reply("Choose a template to start a workout.", {
         reply_markup: keyboard,
@@ -70,6 +72,12 @@ export const workoutHandler = {
         console.error(error);
         await ctx.reply("Failed to start workout.");
       }
+    }
+
+    if (data.startsWith("wrk:crnt_tmpl:")) {
+      const currentTemplateId = Number(data.split(":")[2]);
+      if (!currentTemplateId)
+        return ctx.reply("Couldn't able to find template.");
     }
   },
 

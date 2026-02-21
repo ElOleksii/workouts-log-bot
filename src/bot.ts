@@ -59,6 +59,8 @@ bot.command("manage_templates", templateHandler.handleManageTemplates);
 bot.callbackQuery(/^tpl:/, templateHandler.handleCallback);
 
 bot.command("find", statsHandler.handleFind);
+bot.command("get_workouts", statsHandler.handleGetWorkouts);
+bot.callbackQuery(/^stats:/, statsHandler.handleCallback);
 
 bot.on("message:text", async (ctx) => {
   const handled = await templateHandler.handleMessage(ctx);
