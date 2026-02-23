@@ -5,6 +5,54 @@ import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
 
+const startNextTemplateExercise = async (ctx: MyContext) => {
+  const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
+  if (currentExerciseIdx === undefined) return;
+
+  const exercises = ctx.session.templateWorkout?.exercises;
+  if (!exercises) return;
+  const currentTemplateExercise = exercises[currentExerciseIdx];
+
+  if (!currentTemplateExercise) return;
+
+  const currentExerciseName = currentTemplateExercise?.name;
+
+  if (!ctx.session.activeWorkoutId || currentExerciseName === undefined) return;
+
+  const newExercise = await workoutService.addExercise(
+    ctx.session.activeWorkoutId,
+    currentExerciseName,
+  );
+
+  if (!newExercise) return;
+
+  ctx.session.currentExerciseId = newExercise.id;
+
+  let goalText: string = "Your goal is: \n";
+  const targetSets = currentTemplateExercise.sets;
+
+  if (targetSets && targetSets.length > 0) {
+    targetSets.forEach((set, idx) => {
+      goalText += `Set ${idx + 1}: ${set.weight} × ${set.reps}\n`;
+    });
+  }
+
+  const keyboard = new InlineKeyboard()
+    .text("Next exercise", "wrk:next_tmpl_ex")
+    .text("Skip exercise", "wrk:skip_tmpl_ex")
+    .row()
+    .text("Replace exercise", "wrk:replace_tmpl_ex")
+    .text("Additional exercise", "wrk:additional_ex")
+    .row();
+
+  return ctx.reply(
+    `Current exercise: ${newExercise.name}\n\n` +
+      `${goalText}\n` +
+      `Enter weight and repetitions (e.g., 50, 5).`,
+    { reply_markup: keyboard },
+  );
+};
+
 export const workoutHandler = {
   async handleNew(ctx: MyContext) {
     if (ctx.session.activeWorkoutId) {
@@ -74,10 +122,59 @@ export const workoutHandler = {
       }
     }
 
+    if (data === "wrk:next_tmpl_ex") {
+      if (
+        ctx.session.templateWorkout &&
+        ctx.session.templateWorkout.currentExerciseIdx !== undefined
+      ) {
+        ctx.session.templateWorkout.currentExerciseIdx += 1;
+
+        if (
+          ctx.session.templateWorkout.currentExerciseIdx <
+          ctx.session.templateWorkout.exercises.length
+        ) {
+          await startNextTemplateExercise(ctx);
+        } else {
+          await ctx.reply(
+            "You have finished all exercises from the template. You can add other exercises or finish current workout using /finish.",
+          );
+        }
+      }
+    }
+
     if (data.startsWith("wrk:crnt_tmpl:")) {
       const currentTemplateId = Number(data.split(":")[2]);
       if (!currentTemplateId)
         return ctx.reply("Couldn't able to find template.");
+      if (!ctx.from?.id) {
+        return ctx.reply(
+          "Unable to verify user identification. Please try again.",
+        );
+      }
+
+      try {
+        const template =
+          await templateService.findTemplateById(currentTemplateId);
+
+        if (!template || !template.id || template.exercises.length === 0)
+          return ctx.reply("Error while loading template.");
+
+        const newWorkout = await workoutService.createWorkout(ctx.from.id);
+
+        ctx.session.templateWorkout = {
+          templateId: template?.id,
+          exercises: template.exercises,
+          currentExerciseIdx: 0,
+        };
+
+        ctx.session.activeWorkoutId = newWorkout.id;
+
+        ctx.session.workoutMode = "template_workout";
+
+        await startNextTemplateExercise(ctx);
+      } catch (e) {
+        console.error(e);
+      }
     }
   },
 
