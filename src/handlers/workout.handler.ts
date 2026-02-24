@@ -45,7 +45,7 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     .text("Additional exercise", "wrk:additional_ex")
     .row();
 
-  return ctx.reply(
+  return ctx.editMessageText(
     `Current exercise: ${newExercise.name}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
@@ -128,6 +128,39 @@ export const workoutHandler = {
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
       ) {
         ctx.session.templateWorkout.currentExerciseIdx += 1;
+        if (
+          ctx.session.templateWorkout.currentExerciseIdx <
+          ctx.session.templateWorkout.exercises.length
+        ) {
+          await startNextTemplateExercise(ctx);
+        } else {
+          await ctx.reply(
+            "You have finished all exercises from the template. You can add other exercises or finish current workout using /finish.",
+          );
+        }
+      }
+    }
+
+    if (data === "wrk:skip_tmpl_ex") {
+      if (
+        ctx.session.templateWorkout &&
+        ctx.session.templateWorkout.currentExerciseIdx !== undefined
+      ) {
+        const currentExerciseId = ctx.session.currentExerciseId;
+        if (currentExerciseId) {
+          try {
+            const currentExercise =
+              await workoutService.getExerciseById(currentExerciseId);
+
+            if (currentExercise && currentExercise.sets.length === 0) {
+              await workoutService.deleteExercise(currentExerciseId);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        ctx.session.templateWorkout.currentExerciseIdx += 1;
 
         if (
           ctx.session.templateWorkout.currentExerciseIdx <
@@ -139,6 +172,42 @@ export const workoutHandler = {
             "You have finished all exercises from the template. You can add other exercises or finish current workout using /finish.",
           );
         }
+      }
+    }
+    if (data === "wrk:replace_tmpl_ex") {
+      if (
+        ctx.session.templateWorkout &&
+        ctx.session.templateWorkout.currentExerciseIdx !== undefined
+      ) {
+        ctx.session.workoutMode = "await_replace_name";
+
+        const cancelKeyboard = new InlineKeyboard().text(
+          "Back",
+          "wrk:cancel_input",
+        );
+
+        return ctx.editMessageText(
+          "Enter a name for the exercise to replace the current one.",
+          { reply_markup: cancelKeyboard },
+        );
+      }
+    }
+    if (data === "wrk:additional_ex") {
+      if (
+        ctx.session.templateWorkout &&
+        ctx.session.templateWorkout.currentExerciseIdx !== undefined
+      ) {
+        ctx.session.workoutMode = "await_extra_name";
+
+        const cancelKeyboard = new InlineKeyboard().text(
+          "Back",
+          "wrk:cancel_input",
+        );
+
+        return ctx.editMessageText(
+          "Enter a name for the additional exercise.",
+          { reply_markup: cancelKeyboard },
+        );
       }
     }
 
@@ -284,6 +353,84 @@ export const workoutHandler = {
       );
     }
 
+    if (ctx.session.workoutMode === "await_replace_name") {
+      const activeWorkoutId = ctx.session.activeWorkoutId;
+      const currentExerciseId = ctx.session.currentExerciseId;
+
+      try {
+        if (currentExerciseId) {
+          const oldExercise =
+            await workoutService.getExerciseById(currentExerciseId);
+          if (oldExercise && oldExercise.sets.length === 0) {
+            await workoutService.deleteExercise(currentExerciseId);
+          }
+        }
+
+        if (!activeWorkoutId)
+          return ctx.reply("You don't have an active workout now.");
+
+        const newExercise = await workoutService.addExercise(
+          activeWorkoutId,
+          text,
+        );
+
+        ctx.session.currentExerciseId = newExercise.id;
+        ctx.session.workoutMode = "template_workout";
+
+        const keyboard = new InlineKeyboard()
+          .text("Next exercise", "wrk:next_tmpl_ex")
+          .text("Skip exercise", "wrk:skip_tmpl_ex")
+          .row()
+          .text("Replace exercise", "wrk:replace_tmpl_ex")
+          .text("Additional exercise", "wrk:additional_ex")
+          .row();
+
+        return ctx.reply(
+          `The exercise was replaced with ${newExercise.name}.\nEnter weight and repetitions (e.g., 50, 5). `,
+          {
+            reply_markup: keyboard,
+          },
+        );
+      } catch (e) {
+        console.error(e);
+        return ctx.reply("An error occured while replacing the exercise.");
+      }
+    }
+
+    if (ctx.session.workoutMode === "await_extra_name") {
+      const activeWorkoutId = ctx.session.activeWorkoutId;
+
+      try {
+        if (!activeWorkoutId)
+          return ctx.reply("You don't have an active workout now.");
+        const newExercise = await workoutService.addExercise(
+          activeWorkoutId,
+          text,
+        );
+
+        ctx.session.currentExerciseId = newExercise.id;
+        ctx.session.workoutMode = "template_workout";
+
+        const keyboard = new InlineKeyboard()
+          .text("Next exercise", "wrk:next_tmpl_ex")
+          .text("Skip exercise", "wrk:skip_tmpl_ex")
+          .row()
+          .text("Replace exercise", "wrk:replace_tmpl_ex")
+          .text("Additional exercise", "wrk:additional_ex")
+          .row();
+
+        return ctx.reply(
+          `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
+          {
+            reply_markup: keyboard,
+          },
+        );
+      } catch (e) {
+        console.error(e);
+        return ctx.reply("An error occured while adding new exercise.");
+      }
+    }
+
     const setRegex = /^(\d+(?:\.\d+)?)[,\s]+(\d+)$/;
     const match = text.match(setRegex);
 
@@ -299,12 +446,31 @@ export const workoutHandler = {
 
       try {
         await workoutService.addSet(exerciseId, weight, reps);
-        // await ctx.reply("Set recorded.")
+        if (ctx.session.workoutMode === "template_workout") {
+          const keyboard = new InlineKeyboard()
+            .text("Next exercise", "wrk:next_tmpl_ex")
+            .text("Skip exercise", "wrk:skip_tmpl_ex")
+            .row()
+            .text("Replace exercise", "wrk:replace_tmpl_ex")
+            .text("Additional exercise", "wrk:additional_ex");
+
+          return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
+            reply_markup: keyboard,
+          });
+        } else {
+          return ctx.reply(`Set recorded: ${weight}kg × ${reps}`);
+        }
       } catch (error) {
         console.log(error);
         return ctx.reply("Failed to add set");
       }
-      return;
+    }
+
+    if (ctx.session.workoutMode === "template_workout") {
+      return ctx.reply(
+        "Enter weight and reps (e.g., 50 10).\n\n" +
+          "If you want to add or replace an exercise, please use the buttons under the exercise message.",
+      );
     }
 
     try {
