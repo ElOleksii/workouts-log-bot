@@ -94,4 +94,51 @@ export const templateService = {
       },
     });
   },
+  async updateTemplateProgression(templateId: number, workoutId: number) {
+    const workout = await prisma.workout.findUnique({
+      where: { id: workoutId },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+    });
+
+    const template = await prisma.template.findUnique({
+      where: {
+        id: templateId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+    });
+
+    if (!workout || !template) return;
+
+    const workoutExercises = workout.exercises;
+    const templateExercises = template.exercises;
+
+    for (let workoutEx of workoutExercises) {
+      const templateEx = templateExercises.find(
+        (tEx) => tEx.name === workoutEx.name,
+      );
+
+      if (!templateEx) continue;
+
+      let isUptaded = false;
+      const newTemplateSets = [];
+      const maxSetCount = Math.max(
+        workoutEx.sets.length,
+        templateEx.sets.length,
+      );
+
+      console.log(maxSetCount);
+    }
+  },
 };

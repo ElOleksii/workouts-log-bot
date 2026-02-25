@@ -254,27 +254,32 @@ export const workoutHandler = {
       );
     }
 
-    try {
-      const workoutId = ctx.session.activeWorkoutId;
+    if (ctx.session.workoutMode === "free_workout") {
+      try {
+        const workoutId = ctx.session.activeWorkoutId;
 
-      await workoutService.finishWorkout(workoutId);
+        await workoutService.finishWorkout(workoutId);
 
-      const duration = await calculateWorkoutTime(workoutId);
+        const duration = await calculateWorkoutTime(workoutId);
 
-      ctx.session.activeWorkoutId = null;
-      ctx.session.currentExerciseId = null;
+        ctx.session.activeWorkoutId = null;
+        ctx.session.currentExerciseId = null;
 
-      if (!duration) {
-        return;
+        if (!duration) {
+          return;
+        }
+
+        await ctx.reply(
+          "Workout session successfully completed and recorded." +
+            `\nSession duration: ${formatDuration(duration)}`,
+        );
+      } catch (error) {
+        console.error(error);
+        await ctx.reply("Failed to finish workout.");
       }
+    }
 
-      await ctx.reply(
-        "Workout session successfully completed and recorded." +
-          `\nSession duration: ${formatDuration(duration)}`,
-      );
-    } catch (error) {
-      console.error(error);
-      await ctx.reply("Failed to finish workout.");
+    if (ctx.session.workoutMode === "template_workout") {
     }
   },
 
