@@ -40,13 +40,21 @@ export const workoutService = {
     });
   },
 
-  async findExercise(exerciseId: number) {
-    return await prisma.set.findMany({
+  async getExerciseById(exerciseId: number) {
+    return prisma.exercise.findUnique({
       where: {
-        exerciseId: exerciseId,
+        id: exerciseId,
       },
-      orderBy: {
-        id: "desc",
+      include: {
+        sets: true,
+      },
+    });
+  },
+
+  async deleteExercise(exerciseId: number) {
+    return prisma.exercise.delete({
+      where: {
+        id: exerciseId,
       },
     });
   },

@@ -1,6 +1,6 @@
 import { InlineKeyboard } from "grammy";
 import { statsService } from "../services/stats.service.js";
-import type { MyContext } from "../types.js";
+import type { MyContext } from "../types/index.js";
 import { formatWorkoutSummary } from "../utils/utils.js";
 import workoutService from "../services/workout.service.js";
 

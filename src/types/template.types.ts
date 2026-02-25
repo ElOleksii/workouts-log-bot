@@ -1,5 +1,3 @@
-import type { Context, SessionFlavor } from "grammy";
-
 export type EditorMode =
   | "idle"
   | "editing"
@@ -21,12 +19,3 @@ export interface TemplateDraft {
   exercises: TemplateDraftExercise[];
   sourceWorkoutId?: number;
 }
-export interface SessionData {
-  activeWorkoutId: number | null;
-  currentExerciseId: number | null;
-  templateDraft: TemplateDraft | null;
-  templateStage: EditorMode;
-  templateCurrentExerciseIdx: number | null;
-}
-
-export type MyContext = Context & SessionFlavor<SessionData>;

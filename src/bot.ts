@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Bot, GrammyError, HttpError, session } from "grammy";
 import { Redis } from "ioredis";
 import { RedisAdapter } from "@grammyjs/storage-redis";
-import type { MyContext, SessionData } from "./types.js";
+import type { MyContext, SessionData } from "./types/index.js";
 import { workoutHandler } from "./handlers/workout.handler.js";
 import { statsHandler } from "./handlers/stats.handler.js";
 import { templateHandler } from "./handlers/template.handler.js";
@@ -18,6 +18,8 @@ const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
     currentExerciseId: null,
+    workoutMode: "idle",
+    templateWorkout: null,
     templateDraft: null,
     templateStage: "idle",
     templateCurrentExerciseIdx: null,
