@@ -139,6 +139,56 @@ export const templateService = {
       );
 
       console.log(maxSetCount);
+
+      for (let i = 0; i < maxSetCount; i++) {
+        const workoutSet = workoutEx.sets[i];
+        const templateSet = templateEx.sets[i];
+
+        if (workoutSet && !templateSet) {
+          newTemplateSets.push({
+            weight: workoutSet.weight,
+            reps: workoutSet.reps,
+          });
+        } else if (!workoutSet && templateSet) {
+          newTemplateSets.push({
+            weight: templateSet.weight,
+            reps: templateSet.reps,
+          });
+        } else if (workoutSet && templateSet) {
+          const isBetter =
+            workoutSet.weight > templateSet.weight ||
+            (workoutSet.weight === templateSet.weight &&
+              workoutSet.reps > templateSet.reps);
+
+          if (isBetter) {
+            newTemplateSets.push({
+              weight: workoutSet.weight,
+              reps: workoutSet.reps,
+            });
+            isUptaded = true;
+          } else {
+            newTemplateSets.push({
+              weight: templateSet.weight,
+              reps: templateSet.reps,
+            });
+          }
+        }
+      }
+
+      if (isUptaded) {
+        await prisma.$transaction([
+          prisma.templateSet.deleteMany({
+            where: { templateExerciseId: templateEx.id },
+          }),
+          prisma.templateSet.createMany({
+            data: newTemplateSets.map((s) => ({
+              templateExerciseId: templateEx.id,
+              weight: s.weight,
+              reps: s.reps,
+            })),
+          }),
+        ]);
+      }
     }
   },
 };

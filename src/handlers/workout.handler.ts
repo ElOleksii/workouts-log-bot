@@ -254,32 +254,38 @@ export const workoutHandler = {
       );
     }
 
-    if (ctx.session.workoutMode === "free_workout") {
-      try {
-        const workoutId = ctx.session.activeWorkoutId;
+    try {
+      const workoutId = ctx.session.activeWorkoutId;
 
-        await workoutService.finishWorkout(workoutId);
+      await workoutService.finishWorkout(workoutId);
 
-        const duration = await calculateWorkoutTime(workoutId);
-
-        ctx.session.activeWorkoutId = null;
-        ctx.session.currentExerciseId = null;
-
-        if (!duration) {
-          return;
-        }
-
-        await ctx.reply(
-          "Workout session successfully completed and recorded." +
-            `\nSession duration: ${formatDuration(duration)}`,
+      if (
+        ctx.session.workoutMode === "template_workout" &&
+        ctx.session.templateWorkout?.templateId !== undefined
+      ) {
+        await templateService.updateTemplateProgression(
+          ctx.session.templateWorkout.templateId,
+          workoutId,
         );
-      } catch (error) {
-        console.error(error);
-        await ctx.reply("Failed to finish workout.");
       }
-    }
+      const duration = await calculateWorkoutTime(workoutId);
 
-    if (ctx.session.workoutMode === "template_workout") {
+      ctx.session.activeWorkoutId = null;
+      ctx.session.currentExerciseId = null;
+      ctx.session.workoutMode = "idle";
+      ctx.session.templateWorkout = null;
+
+      if (!duration) {
+        return;
+      }
+
+      await ctx.reply(
+        "Workout session successfully completed and recorded." +
+          `\nSession duration: ${formatDuration(duration)}`,
+      );
+    } catch (error) {
+      console.error(error);
+      await ctx.reply("Failed to finish workout.");
     }
   },
 
