@@ -1,4 +1,4 @@
-import type { MyContext } from "../types.js";
+import type { MyContext } from "../types/index.js";
 import { calculateWorkoutTime } from "../queries.js";
 import { formatDuration } from "../utils/utils.js";
 import workoutService from "../services/workout.service.js";

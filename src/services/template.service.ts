@@ -1,5 +1,5 @@
 import { prisma } from "../prisma.js";
-import type { TemplateDraftExercise } from "../types.js";
+import type { TemplateDraftExercise } from "../types/index.js";
 
 export const templateService = {
   async createTemplate(
