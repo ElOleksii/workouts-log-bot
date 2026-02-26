@@ -13,7 +13,6 @@ export const workoutService = {
       data: {
         userId: userId,
         startTime: date,
-        endTime: date,
       },
     });
   },

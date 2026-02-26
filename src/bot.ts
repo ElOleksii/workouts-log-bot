@@ -11,9 +11,13 @@ if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL is not defined in environment variables");
 }
 
+if (!process.env.BOT_TOKEN) {
+  throw new Error("BOT_URL is not defined in environment variables");
+}
+
 const redisInstance = new Redis(process.env.REDIS_URL);
 
-export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
+export const bot = new Bot<MyContext>(process.env.BOT_TOKEN);
 const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
