@@ -4,6 +4,13 @@ import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
 
+const resetWorkoutSession = (ctx: MyContext) => {
+  ctx.session.activeWorkoutId = null;
+  ctx.session.currentExerciseId = null;
+  ctx.session.workoutMode = "idle";
+  ctx.session.templateWorkout = null;
+};
+
 const workoutMenuKeyboard = new InlineKeyboard()
   .text("Next exercise", "wrk:next_tmpl_ex")
   .text("Skip exercise", "wrk:skip_tmpl_ex")
@@ -269,10 +276,7 @@ export const workoutHandler = {
       }
       const duration = await workoutService.calculateWorkoutTime(workoutId);
 
-      ctx.session.activeWorkoutId = null;
-      ctx.session.currentExerciseId = null;
-      ctx.session.workoutMode = "idle";
-      ctx.session.templateWorkout = null;
+      resetWorkoutSession(ctx);
 
       if (!duration) {
         return;
@@ -300,8 +304,7 @@ export const workoutHandler = {
 
       await workoutService.cancelWorkout(workoutId);
 
-      ctx.session.activeWorkoutId = null;
-      ctx.session.currentExerciseId = null;
+      resetWorkoutSession(ctx);
 
       await ctx.reply("Workout session has been canceled successfully.");
     } catch (error) {
