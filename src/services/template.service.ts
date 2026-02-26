@@ -138,8 +138,6 @@ export const templateService = {
         templateEx.sets.length,
       );
 
-      console.log(maxSetCount);
-
       for (let i = 0; i < maxSetCount; i++) {
         const workoutSet = workoutEx.sets[i];
         const templateSet = templateEx.sets[i];
@@ -155,10 +153,15 @@ export const templateService = {
             reps: templateSet.reps,
           });
         } else if (workoutSet && templateSet) {
-          const isBetter =
-            workoutSet.weight > templateSet.weight ||
-            (workoutSet.weight === templateSet.weight &&
-              workoutSet.reps > templateSet.reps);
+          // using weights over reps
+          // const isBetter =
+          //   workoutSet.weight > templateSet.weight ||
+          //   (workoutSet.weight === templateSet.weight &&
+          //     workoutSet.reps > templateSet.reps);
+
+          const oldVolume: number = templateSet.weight * templateSet.reps;
+          const newVolume: number = workoutSet.weight * workoutSet.reps;
+          const isBetter = newVolume > oldVolume;
 
           if (isBetter) {
             newTemplateSets.push({

@@ -1,9 +1,23 @@
 import type { MyContext } from "../types/index.js";
-import { calculateWorkoutTime } from "../queries.js";
 import { formatDuration } from "../utils/utils.js";
 import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
+
+const resetWorkoutSession = (ctx: MyContext) => {
+  ctx.session.activeWorkoutId = null;
+  ctx.session.currentExerciseId = null;
+  ctx.session.workoutMode = "idle";
+  ctx.session.templateWorkout = null;
+};
+
+const workoutMenuKeyboard = new InlineKeyboard()
+  .text("Next exercise", "wrk:next_tmpl_ex")
+  .text("Skip exercise", "wrk:skip_tmpl_ex")
+  .row()
+  .text("Replace exercise", "wrk:replace_tmpl_ex")
+  .text("Additional exercise", "wrk:additional_ex")
+  .row();
 
 const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
@@ -37,19 +51,11 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     });
   }
 
-  const keyboard = new InlineKeyboard()
-    .text("Next exercise", "wrk:next_tmpl_ex")
-    .text("Skip exercise", "wrk:skip_tmpl_ex")
-    .row()
-    .text("Replace exercise", "wrk:replace_tmpl_ex")
-    .text("Additional exercise", "wrk:additional_ex")
-    .row();
-
   return ctx.editMessageText(
     `Current exercise: ${newExercise.name}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
-    { reply_markup: keyboard },
+    { reply_markup: workoutMenuKeyboard },
   );
 };
 
@@ -268,12 +274,9 @@ export const workoutHandler = {
           workoutId,
         );
       }
-      const duration = await calculateWorkoutTime(workoutId);
+      const duration = await workoutService.calculateWorkoutTime(workoutId);
 
-      ctx.session.activeWorkoutId = null;
-      ctx.session.currentExerciseId = null;
-      ctx.session.workoutMode = "idle";
-      ctx.session.templateWorkout = null;
+      resetWorkoutSession(ctx);
 
       if (!duration) {
         return;
@@ -301,8 +304,7 @@ export const workoutHandler = {
 
       await workoutService.cancelWorkout(workoutId);
 
-      ctx.session.activeWorkoutId = null;
-      ctx.session.currentExerciseId = null;
+      resetWorkoutSession(ctx);
 
       await ctx.reply("Workout session has been canceled successfully.");
     } catch (error) {
@@ -388,18 +390,10 @@ export const workoutHandler = {
         ctx.session.currentExerciseId = newExercise.id;
         ctx.session.workoutMode = "template_workout";
 
-        const keyboard = new InlineKeyboard()
-          .text("Next exercise", "wrk:next_tmpl_ex")
-          .text("Skip exercise", "wrk:skip_tmpl_ex")
-          .row()
-          .text("Replace exercise", "wrk:replace_tmpl_ex")
-          .text("Additional exercise", "wrk:additional_ex")
-          .row();
-
         return ctx.reply(
           `The exercise was replaced with ${newExercise.name}.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           },
         );
       } catch (e) {
@@ -422,18 +416,10 @@ export const workoutHandler = {
         ctx.session.currentExerciseId = newExercise.id;
         ctx.session.workoutMode = "template_workout";
 
-        const keyboard = new InlineKeyboard()
-          .text("Next exercise", "wrk:next_tmpl_ex")
-          .text("Skip exercise", "wrk:skip_tmpl_ex")
-          .row()
-          .text("Replace exercise", "wrk:replace_tmpl_ex")
-          .text("Additional exercise", "wrk:additional_ex")
-          .row();
-
         return ctx.reply(
           `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           },
         );
       } catch (e) {
@@ -458,15 +444,8 @@ export const workoutHandler = {
       try {
         await workoutService.addSet(exerciseId, weight, reps);
         if (ctx.session.workoutMode === "template_workout") {
-          const keyboard = new InlineKeyboard()
-            .text("Next exercise", "wrk:next_tmpl_ex")
-            .text("Skip exercise", "wrk:skip_tmpl_ex")
-            .row()
-            .text("Replace exercise", "wrk:replace_tmpl_ex")
-            .text("Additional exercise", "wrk:additional_ex");
-
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           });
         } else {
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`);
