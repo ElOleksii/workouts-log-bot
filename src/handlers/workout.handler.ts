@@ -1,5 +1,4 @@
 import type { MyContext } from "../types/index.js";
-import { calculateWorkoutTime } from "../queries.js";
 import { formatDuration } from "../utils/utils.js";
 import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
@@ -268,7 +267,7 @@ export const workoutHandler = {
           workoutId,
         );
       }
-      const duration = await calculateWorkoutTime(workoutId);
+      const duration = await workoutService.calculateWorkoutTime(workoutId);
 
       ctx.session.activeWorkoutId = null;
       ctx.session.currentExerciseId = null;
