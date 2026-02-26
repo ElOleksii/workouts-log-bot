@@ -109,7 +109,7 @@ export const templateHandler = {
     const data = ctx.callbackQuery?.data;
     if (!data) return;
 
-    ctx.answerCallbackQuery();
+    await ctx.answerCallbackQuery();
 
     if (data === "tpl:manually") {
       const currentTemplate = ensureTemplateDraft(ctx);
