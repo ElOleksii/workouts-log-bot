@@ -78,7 +78,7 @@ export const statsHandler = {
     const data = ctx.callbackQuery?.data;
     if (!data) return;
 
-    ctx.answerCallbackQuery();
+    await ctx.answerCallbackQuery();
 
     if (data.startsWith("stats:load_more")) {
       const userId = ctx.from?.id;

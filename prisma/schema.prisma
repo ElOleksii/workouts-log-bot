@@ -13,7 +13,7 @@ datasource db {
 model Workout {
   id Int @id @default(autoincrement())
   userId Int @map("user_id")  
-  startTime DateTime? @map("start_time")
+  startTime DateTime @map("start_time")
   endTime DateTime? @map("end_time")
   isFinished Boolean @map("is_finished") @default(false)
   createdAt DateTime @map("created_at") @default(now())
