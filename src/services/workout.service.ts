@@ -107,48 +107,29 @@ export const workoutService = {
   },
 
   async undoLastLog(exerciseId: number): Promise<undoResult> {
-    const sets = await prisma.set.findMany({
-      where: {
-        exerciseId: exerciseId,
-      },
-      orderBy: {
-        id: "desc",
+    const exercise = await prisma.exercise.findUnique({
+      where: { id: exerciseId },
+      include: {
+        sets: { orderBy: { id: "desc" }, take: 1 },
       },
     });
 
-    if (sets.length > 0) {
-      const lastSet = sets[0];
-      await prisma.set.delete({
-        where: {
-          id: lastSet!.id,
-        },
-      });
+    if (!exercise) return { type: "NOTHING_TO_DELETE" };
 
+    if (exercise.sets.length > 0) {
+      const lastSet = exercise.sets[0]!;
+      await prisma.set.delete({ where: { id: lastSet.id } });
       return {
         type: "SET_DELETED",
-        weight: lastSet!.weight,
-        reps: lastSet!.reps,
+        weight: lastSet.weight,
+        reps: lastSet.reps,
       };
     }
 
-    const exercise = await prisma.exercise.findUnique({
-      where: {
-        id: exerciseId,
-      },
+    await prisma.exercise.delete({
+      where: { id: exercise.id },
     });
-
-    if (exercise) {
-      await prisma.exercise.delete({
-        where: {
-          id: exerciseId,
-        },
-      });
-      return {
-        type: "EXERCISE_DELETED",
-        name: exercise.name,
-      };
-    }
-    return { type: "NOTHING_TO_DELETE" };
+    return { type: "EXERCISE_DELETED", name: exercise.name };
   },
 
   async addExercise(workoutId: number, name: string) {

@@ -4,6 +4,14 @@ import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
 
+const workoutMenuKeyboard = new InlineKeyboard()
+  .text("Next exercise", "wrk:next_tmpl_ex")
+  .text("Skip exercise", "wrk:skip_tmpl_ex")
+  .row()
+  .text("Replace exercise", "wrk:replace_tmpl_ex")
+  .text("Additional exercise", "wrk:additional_ex")
+  .row();
+
 const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
   if (currentExerciseIdx === undefined) return;
@@ -36,19 +44,11 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     });
   }
 
-  const keyboard = new InlineKeyboard()
-    .text("Next exercise", "wrk:next_tmpl_ex")
-    .text("Skip exercise", "wrk:skip_tmpl_ex")
-    .row()
-    .text("Replace exercise", "wrk:replace_tmpl_ex")
-    .text("Additional exercise", "wrk:additional_ex")
-    .row();
-
   return ctx.editMessageText(
     `Current exercise: ${newExercise.name}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
-    { reply_markup: keyboard },
+    { reply_markup: workoutMenuKeyboard },
   );
 };
 
@@ -387,18 +387,10 @@ export const workoutHandler = {
         ctx.session.currentExerciseId = newExercise.id;
         ctx.session.workoutMode = "template_workout";
 
-        const keyboard = new InlineKeyboard()
-          .text("Next exercise", "wrk:next_tmpl_ex")
-          .text("Skip exercise", "wrk:skip_tmpl_ex")
-          .row()
-          .text("Replace exercise", "wrk:replace_tmpl_ex")
-          .text("Additional exercise", "wrk:additional_ex")
-          .row();
-
         return ctx.reply(
           `The exercise was replaced with ${newExercise.name}.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           },
         );
       } catch (e) {
@@ -421,18 +413,10 @@ export const workoutHandler = {
         ctx.session.currentExerciseId = newExercise.id;
         ctx.session.workoutMode = "template_workout";
 
-        const keyboard = new InlineKeyboard()
-          .text("Next exercise", "wrk:next_tmpl_ex")
-          .text("Skip exercise", "wrk:skip_tmpl_ex")
-          .row()
-          .text("Replace exercise", "wrk:replace_tmpl_ex")
-          .text("Additional exercise", "wrk:additional_ex")
-          .row();
-
         return ctx.reply(
           `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           },
         );
       } catch (e) {
@@ -457,15 +441,8 @@ export const workoutHandler = {
       try {
         await workoutService.addSet(exerciseId, weight, reps);
         if (ctx.session.workoutMode === "template_workout") {
-          const keyboard = new InlineKeyboard()
-            .text("Next exercise", "wrk:next_tmpl_ex")
-            .text("Skip exercise", "wrk:skip_tmpl_ex")
-            .row()
-            .text("Replace exercise", "wrk:replace_tmpl_ex")
-            .text("Additional exercise", "wrk:additional_ex");
-
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
-            reply_markup: keyboard,
+            reply_markup: workoutMenuKeyboard,
           });
         } else {
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`);
