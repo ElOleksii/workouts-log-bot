@@ -169,6 +169,49 @@ export const workoutService = {
     const duration = workout.endTime?.getTime() - workout.startTime?.getTime();
     return Math.round(duration / 1000);
   },
+
+  async skipExercise(exerciseId: number) {
+    const exercise = prisma.exercise.findUnique({
+      where: { id: exerciseId },
+      include: {
+        sets: true,
+      },
+    });
+
+    if (exercise && exercise.sets.length === 0) {
+      await prisma.exercise.delete({
+        where: { id: exerciseId },
+      });
+    }
+  },
+
+  async replaceExercise(
+    workoutId: number,
+    oldExerciseId: number,
+    newName: string,
+  ) {
+    const oldExercise = await prisma.exercise.findUnique({
+      where: {
+        id: oldExerciseId,
+      },
+      include: {
+        sets: true,
+      },
+    });
+
+    if (oldExercise && oldExercise.sets.length === 0) {
+      await prisma.exercise.delete({
+        where: { id: oldExerciseId },
+      });
+
+      return prisma.exercise.create({
+        data: {
+          workoutId,
+          name: newName,
+        },
+      });
+    }
+  },
 };
 
 export default workoutService;

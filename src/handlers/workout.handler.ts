@@ -154,16 +154,7 @@ export const workoutHandler = {
       ) {
         const currentExerciseId = ctx.session.currentExerciseId;
         if (currentExerciseId) {
-          try {
-            const currentExercise =
-              await workoutService.getExerciseById(currentExerciseId);
-
-            if (currentExercise && currentExercise.sets.length === 0) {
-              await workoutService.deleteExercise(currentExerciseId);
-            }
-          } catch (e) {
-            console.error(e);
-          }
+          await workoutService.skipExercise(currentExerciseId);
         }
 
         ctx.session.templateWorkout.currentExerciseIdx += 1;
@@ -370,22 +361,16 @@ export const workoutHandler = {
       const activeWorkoutId = ctx.session.activeWorkoutId;
       const currentExerciseId = ctx.session.currentExerciseId;
 
+      if (!currentExerciseId) return;
+
       try {
-        if (currentExerciseId) {
-          const oldExercise =
-            await workoutService.getExerciseById(currentExerciseId);
-          if (oldExercise && oldExercise.sets.length === 0) {
-            await workoutService.deleteExercise(currentExerciseId);
-          }
-        }
-
-        if (!activeWorkoutId)
-          return ctx.reply("You don't have an active workout now.");
-
-        const newExercise = await workoutService.addExercise(
+        const newExercise = await workoutService.replaceExercise(
           activeWorkoutId,
+          currentExerciseId,
           text,
         );
+
+        if (!newExercise) return;
 
         ctx.session.currentExerciseId = newExercise.id;
         ctx.session.workoutMode = "template_workout";
