@@ -9,6 +9,8 @@ const resetWorkoutSession = (ctx: MyContext) => {
   ctx.session.currentExerciseId = null;
   ctx.session.workoutMode = "idle";
   ctx.session.templateWorkout = null;
+  ctx.session.currentExerciseSets = [];
+  ctx.session.currentMessageId = null;
 };
 
 const workoutMenuKeyboard = new InlineKeyboard()
@@ -28,6 +30,8 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentTemplateExercise = exercises[currentExerciseIdx];
 
   if (!currentTemplateExercise) return;
+
+  ctx.session.currentExerciseSets = [];
 
   const currentExerciseName = currentTemplateExercise?.name;
 
@@ -51,12 +55,14 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     });
   }
 
-  return ctx.editMessageText(
+  const message = await ctx.reply(
     `Current exercise: ${newExercise.name}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
     { reply_markup: workoutMenuKeyboard },
   );
+
+  ctx.session.currentMessageId = message.message_id;
 };
 
 export const workoutHandler = {
@@ -423,6 +429,7 @@ export const workoutHandler = {
 
       try {
         await workoutService.addSet(exerciseId, weight, reps);
+        ctx.session.currentExerciseSets.push({ weight, reps });
         if (ctx.session.workoutMode === "template_workout") {
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
             reply_markup: workoutMenuKeyboard,
@@ -456,5 +463,27 @@ export const workoutHandler = {
       console.log(error);
       return ctx.reply("Failed to add exercise");
     }
+  },
+
+  buildExerciseMessage(
+    exerciseName: string,
+    currentExerciseNum: number,
+    totalExercises: number,
+    goalSets: Array<{ weight: number; reps: number }>,
+    currentSets: Array<{ weight: number; reps: number }>,
+  ) {
+    let text = `${exerciseName} (${currentExerciseNum} / ${totalExercises})\n`;
+
+    text += "\nGoal:";
+    goalSets.forEach(
+      (s, idx) => (text += `\nSet ${idx + 1}: ${s.weight} × ${s.reps}`),
+    );
+
+    text += "\nSaved:";
+    currentSets.forEach(
+      (s, idx) => (text += `\n✅ Set ${idx + 1}: ${s.weight} × ${s.reps}`),
+    );
+
+    return text;
   },
 };

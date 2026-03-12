@@ -11,6 +11,8 @@ export interface SessionData {
   templateDraft: TemplateDraft | null;
   templateStage: EditorMode;
   templateCurrentExerciseIdx: number | null;
+  currentExerciseSets: { weight: number; reps: number }[];
+  currentMessageId: number | null;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;

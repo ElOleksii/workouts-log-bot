@@ -27,6 +27,8 @@ const initial = (): SessionData => {
     templateDraft: null,
     templateStage: "idle",
     templateCurrentExerciseIdx: null,
+    currentExerciseSets: [],
+    currentMessageId: null,
   };
 };
 
