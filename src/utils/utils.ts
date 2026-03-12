@@ -1,4 +1,4 @@
-import { calculateWorkoutTime } from "../queries.js";
+import workoutService from "../services/workout.service.js";
 
 export const formatDuration = (totalSeconds: number): string => {
   if (totalSeconds < 0) {
@@ -65,7 +65,7 @@ export const formatWorkoutSummary = async (workout: any): Promise<string> => {
     }
   });
 
-  const duration = await calculateWorkoutTime(workout.id);
+  const duration = await workoutService.calculateWorkoutTime(workout.id);
 
   if (duration) {
     text += `\nSession duration: ${formatDuration(duration)}\n\n`;

@@ -126,9 +126,7 @@ export const workoutHandler = {
         console.error(error);
         await ctx.reply("Failed to start workout.");
       }
-    }
-
-    if (data === "wrk:next_tmpl_ex") {
+    } else if (data === "wrk:next_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -145,9 +143,7 @@ export const workoutHandler = {
           );
         }
       }
-    }
-
-    if (data === "wrk:skip_tmpl_ex") {
+    } else if (data === "wrk:skip_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -170,8 +166,7 @@ export const workoutHandler = {
           );
         }
       }
-    }
-    if (data === "wrk:replace_tmpl_ex") {
+    } else if (data === "wrk:replace_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -188,8 +183,7 @@ export const workoutHandler = {
           { reply_markup: cancelKeyboard },
         );
       }
-    }
-    if (data === "wrk:additional_ex") {
+    } else if (data === "wrk:additional_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -206,9 +200,7 @@ export const workoutHandler = {
           { reply_markup: cancelKeyboard },
         );
       }
-    }
-
-    if (data.startsWith("wrk:crnt_tmpl:")) {
+    } else if (data.startsWith("wrk:crnt_tmpl:")) {
       const currentTemplateId = Number(data.split(":")[2]);
       if (!currentTemplateId)
         return ctx.reply("Couldn't able to find template.");
@@ -219,13 +211,16 @@ export const workoutHandler = {
       }
 
       try {
-        const template =
-          await templateService.findTemplateById(currentTemplateId);
+        const res = await workoutService.startWorkoutFromTemplate(
+          currentTemplateId,
+          ctx.from.id,
+        );
 
-        if (!template || !template.id || template.exercises.length === 0)
-          return ctx.reply("Error while loading template.");
+        if (!res) {
+          return ctx.reply("Couldn't load the template. Please try again.");
+        }
 
-        const newWorkout = await workoutService.createWorkout(ctx.from.id);
+        const { workout: newWorkout, template } = res;
 
         ctx.session.templateWorkout = {
           templateId: template?.id,
@@ -267,11 +262,11 @@ export const workoutHandler = {
       }
       const duration = await workoutService.calculateWorkoutTime(workoutId);
 
-      resetWorkoutSession(ctx);
-
       if (!duration) {
-        return;
+        return ctx.reply("Workout session completed.");
       }
+
+      resetWorkoutSession(ctx);
 
       await ctx.reply(
         "Workout session successfully completed and recorded." +

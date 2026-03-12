@@ -3,6 +3,7 @@ import type { MyContext, TemplateDraft } from "../types/index.js";
 import workoutService from "../services/workout.service.js";
 import { formatWorkoutSummary } from "../utils/utils.js";
 import { templateService } from "../services/template.service.js";
+import { formatKyivDate } from "../utils/time.js";
 
 const methodCreatingKeyboard = () =>
   new InlineKeyboard()
@@ -156,8 +157,8 @@ export const templateHandler = {
       const keyboard = new InlineKeyboard();
 
       lastWorkouts.forEach((w) => {
-        const dataStr = w.startTime?.toLocaleDateString();
-        keyboard.text(`Workout for ${dataStr}`, `tpl:pick:${w.id}`).row();
+        const formattedDate = formatKyivDate(w.startTime);
+        keyboard.text(`Workout for ${formattedDate}`, `tpl:pick:${w.id}`).row();
       });
 
       keyboard.text("Load more").text("Discard", "tpl:discard").row();
@@ -182,7 +183,7 @@ export const templateHandler = {
       if (!workout) return ctx.reply("Workout wasn't found.");
 
       const draft: TemplateDraft = {
-        name: `Template from ${new Date(workout.startTime!).toLocaleDateString()}`,
+        name: `Template from ${formatKyivDate(workout.startTime)}`,
         exercises: workout.exercises.map((ex) => ({
           name: ex.name,
           sets: ex.sets.map((set) => ({ weight: set.weight, reps: set.reps })),

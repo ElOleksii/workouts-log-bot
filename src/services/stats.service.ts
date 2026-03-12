@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import { getKyivDayBounds } from "../utils/time.js";
 
 export const statsService = {
   async getWorkoutsByDateInput(userId: number, inputDateString: string) {
@@ -28,11 +29,7 @@ export const statsService = {
       targetDate = new Date(lastWorkout.startTime);
     }
 
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 0);
+    const { startOfDay, endOfDay } = getKyivDayBounds(targetDate);
 
     const workouts = await prisma.workout.findMany({
       where: {
