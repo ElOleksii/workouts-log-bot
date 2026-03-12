@@ -1,5 +1,5 @@
 import type { MyContext } from "../types/index.js";
-import { formatDuration } from "../utils/utils.js";
+import { formatDuration } from "../utils/time.js";
 import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
