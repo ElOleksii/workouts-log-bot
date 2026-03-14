@@ -1,4 +1,38 @@
-import { calculateWorkoutTime } from "../queries.js";
+import workoutService from "../services/workout.service.js";
+
+const KYIV_TIMEZONE = "Europe/Kyiv";
+
+export const getKyivDayBounds = (date: Date) => {
+  const kyivDateStr = date.toLocaleDateString("uk-UA", {
+    timeZone: KYIV_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const [day, month, year] = kyivDateStr.split(".").map(Number);
+
+  const startOfDay = new Date(
+    new Date(year!, month! - 1, day!).toLocaleString("en-US", {
+      timeZone: KYIV_TIMEZONE,
+    }),
+  );
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return { startOfDay, endOfDay };
+};
+
+export const formatKyivDate = (date: Date): string => {
+  return date.toLocaleDateString("uk-UA", {
+    timeZone: KYIV_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 export const formatDuration = (totalSeconds: number): string => {
   if (totalSeconds < 0) {
@@ -35,16 +69,10 @@ export const formatWorkoutSummary = async (workout: any): Promise<string> => {
   }
 
   const startTime = workout.startTime
-    ? new Date(workout.startTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? formatTime(new Date(workout.startTime))
     : "Unknown";
   const endTime = workout.endTime
-    ? new Date(workout.endTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? formatTime(new Date(workout.endTime))
     : "...";
 
   text += `**Workout at ${startTime} - ${endTime}**\n`;
@@ -65,7 +93,7 @@ export const formatWorkoutSummary = async (workout: any): Promise<string> => {
     }
   });
 
-  const duration = await calculateWorkoutTime(workout.id);
+  const duration = await workoutService.calculateWorkoutTime(workout.id);
 
   if (duration) {
     text += `\nSession duration: ${formatDuration(duration)}\n\n`;
@@ -73,3 +101,11 @@ export const formatWorkoutSummary = async (workout: any): Promise<string> => {
 
   return text;
 };
+
+const formatTime = (date: Date): string =>
+  date.toLocaleTimeString("uk-UA", {
+    timeZone: KYIV_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });

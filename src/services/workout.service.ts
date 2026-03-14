@@ -212,6 +212,31 @@ export const workoutService = {
       });
     }
   },
+
+  async startWorkoutFromTemplate(templateId: number, userId: number) {
+    const template = await prisma.template.findUnique({
+      where: { id: templateId },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
+    });
+
+    if (!template || template.exercises.length === 0) return null;
+
+    const workout = await prisma.workout.create({
+      data: {
+        userId,
+        startTime: new Date(),
+        sourceTemplateId: templateId,
+      },
+    });
+
+    return { workout, template };
+  },
 };
 
 export default workoutService;

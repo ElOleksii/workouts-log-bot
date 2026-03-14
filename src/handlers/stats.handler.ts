@@ -1,8 +1,9 @@
 import { InlineKeyboard } from "grammy";
 import { statsService } from "../services/stats.service.js";
 import type { MyContext } from "../types/index.js";
-import { formatWorkoutSummary } from "../utils/utils.js";
+import { formatWorkoutSummary } from "../utils/time.js";
 import workoutService from "../services/workout.service.js";
+import { formatKyivDate } from "../utils/time.js";
 
 export const statsHandler = {
   async handleFind(ctx: MyContext) {
@@ -30,14 +31,14 @@ export const statsHandler = {
       const { date, workouts } = result;
 
       if (workouts.length === 0) {
-        const dateString = date.toLocaleDateString();
-        return ctx.reply(`No workout sessions found for ${dateString}.`);
+        const formattedDate = formatKyivDate(date);
+        return ctx.reply(`No workout sessions found for ${formattedDate}.`);
       }
 
       let responseMessage =
         workouts.length >= 2
-          ? `**Workouts for ${date.toLocaleDateString()}:**\n\n`
-          : `**Workout for ${date.toLocaleDateString()}:**\n`;
+          ? `**Workouts for ${formatKyivDate(date)}:**\n\n`
+          : `**Workout for ${formatKyivDate(date)}:**\n`;
 
       for (const workout of workouts) {
         responseMessage += await formatWorkoutSummary(workout);
@@ -61,9 +62,9 @@ export const statsHandler = {
     const keyboard = new InlineKeyboard();
 
     workouts.forEach((w) => {
-      const dataStr = w.startTime?.toLocaleDateString();
+      const formattedDate = formatKyivDate(w.startTime);
       keyboard
-        .text(`Workout for ${dataStr}`, `stats:get_workout:${w.id}`)
+        .text(`Workout for ${formattedDate}`, `stats:get_workout:${w.id}`)
         .row();
     });
 
@@ -94,9 +95,9 @@ export const statsHandler = {
       const keyboard = new InlineKeyboard();
 
       workouts.forEach((w) => {
-        const dataStr = w.startTime?.toLocaleDateString();
+        const formattedDate = formatKyivDate(w.startTime);
         keyboard
-          .text(`Workout for ${dataStr}`, `stats:get_workout:${w.id}`)
+          .text(`Workout for ${formattedDate}`, `stats:get_workout:${w.id}`)
           .row();
       });
 

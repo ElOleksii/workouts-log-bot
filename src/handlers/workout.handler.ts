@@ -1,5 +1,5 @@
 import type { MyContext } from "../types/index.js";
-import { formatDuration } from "../utils/utils.js";
+import { formatDuration } from "../utils/time.js";
 import workoutService from "../services/workout.service.js";
 import { InlineKeyboard } from "grammy";
 import { templateService } from "../services/template.service.js";
@@ -9,6 +9,8 @@ const resetWorkoutSession = (ctx: MyContext) => {
   ctx.session.currentExerciseId = null;
   ctx.session.workoutMode = "idle";
   ctx.session.templateWorkout = null;
+  ctx.session.currentExerciseSets = [];
+  ctx.session.currentMessageId = null;
 };
 
 const workoutMenuKeyboard = new InlineKeyboard()
@@ -28,6 +30,8 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentTemplateExercise = exercises[currentExerciseIdx];
 
   if (!currentTemplateExercise) return;
+
+  ctx.session.currentExerciseSets = [];
 
   const currentExerciseName = currentTemplateExercise?.name;
 
@@ -51,12 +55,14 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     });
   }
 
-  return ctx.editMessageText(
+  const message = await ctx.reply(
     `Current exercise: ${newExercise.name}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
     { reply_markup: workoutMenuKeyboard },
   );
+
+  ctx.session.currentMessageId = message.message_id;
 };
 
 export const workoutHandler = {
@@ -126,9 +132,7 @@ export const workoutHandler = {
         console.error(error);
         await ctx.reply("Failed to start workout.");
       }
-    }
-
-    if (data === "wrk:next_tmpl_ex") {
+    } else if (data === "wrk:next_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -145,9 +149,7 @@ export const workoutHandler = {
           );
         }
       }
-    }
-
-    if (data === "wrk:skip_tmpl_ex") {
+    } else if (data === "wrk:skip_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -170,8 +172,7 @@ export const workoutHandler = {
           );
         }
       }
-    }
-    if (data === "wrk:replace_tmpl_ex") {
+    } else if (data === "wrk:replace_tmpl_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -188,8 +189,7 @@ export const workoutHandler = {
           { reply_markup: cancelKeyboard },
         );
       }
-    }
-    if (data === "wrk:additional_ex") {
+    } else if (data === "wrk:additional_ex") {
       if (
         ctx.session.templateWorkout &&
         ctx.session.templateWorkout.currentExerciseIdx !== undefined
@@ -206,9 +206,7 @@ export const workoutHandler = {
           { reply_markup: cancelKeyboard },
         );
       }
-    }
-
-    if (data.startsWith("wrk:crnt_tmpl:")) {
+    } else if (data.startsWith("wrk:crnt_tmpl:")) {
       const currentTemplateId = Number(data.split(":")[2]);
       if (!currentTemplateId)
         return ctx.reply("Couldn't able to find template.");
@@ -219,13 +217,16 @@ export const workoutHandler = {
       }
 
       try {
-        const template =
-          await templateService.findTemplateById(currentTemplateId);
+        const res = await workoutService.startWorkoutFromTemplate(
+          currentTemplateId,
+          ctx.from.id,
+        );
 
-        if (!template || !template.id || template.exercises.length === 0)
-          return ctx.reply("Error while loading template.");
+        if (!res) {
+          return ctx.reply("Couldn't load the template. Please try again.");
+        }
 
-        const newWorkout = await workoutService.createWorkout(ctx.from.id);
+        const { workout: newWorkout, template } = res;
 
         ctx.session.templateWorkout = {
           templateId: template?.id,
@@ -267,11 +268,11 @@ export const workoutHandler = {
       }
       const duration = await workoutService.calculateWorkoutTime(workoutId);
 
-      resetWorkoutSession(ctx);
-
       if (!duration) {
-        return;
+        return ctx.reply("Workout session completed.");
       }
+
+      resetWorkoutSession(ctx);
 
       await ctx.reply(
         "Workout session successfully completed and recorded." +
@@ -428,6 +429,7 @@ export const workoutHandler = {
 
       try {
         await workoutService.addSet(exerciseId, weight, reps);
+        ctx.session.currentExerciseSets.push({ weight, reps });
         if (ctx.session.workoutMode === "template_workout") {
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
             reply_markup: workoutMenuKeyboard,
@@ -461,5 +463,27 @@ export const workoutHandler = {
       console.log(error);
       return ctx.reply("Failed to add exercise");
     }
+  },
+
+  buildExerciseMessage(
+    exerciseName: string,
+    currentExerciseNum: number,
+    totalExercises: number,
+    goalSets: Array<{ weight: number; reps: number }>,
+    currentSets: Array<{ weight: number; reps: number }>,
+  ) {
+    let text = `${exerciseName} (${currentExerciseNum} / ${totalExercises})\n`;
+
+    text += "\nGoal:";
+    goalSets.forEach(
+      (s, idx) => (text += `\nSet ${idx + 1}: ${s.weight} × ${s.reps}`),
+    );
+
+    text += "\nSaved:";
+    currentSets.forEach(
+      (s, idx) => (text += `\n✅ Set ${idx + 1}: ${s.weight} × ${s.reps}`),
+    );
+
+    return text;
   },
 };
