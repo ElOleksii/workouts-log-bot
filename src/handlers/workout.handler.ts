@@ -22,9 +22,10 @@ const workoutMenuKeyboard = () =>
     .text("Additional exercise", "wrk:additional_ex")
     .row();
 
-const confirmation = () => {
-  const confirmKeyboard = new InlineKeyboard().text("Confirm", "wrk");
-};
+const confirmKeyboard = (action: string) =>
+  new InlineKeyboard()
+    .text("✅ Confirm", `wrk:confirm:${action}`)
+    .text("❌ Back", `wrk:confirm:cancel`);
 
 const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
@@ -199,6 +200,32 @@ export const workoutHandler = {
           { reply_markup: cancelKeyboard },
         );
       }
+    } else if (data.startsWith("wrk:confirm:")) {
+      const action = data.split(":")[2];
+
+      if (action === "cancel") {
+        await ctx.deleteMessage();
+      } else if (action === "cancel_workout") {
+        if (!ctx.session.activeWorkoutId) {
+          return ctx.reply(
+            "No active workout session found. Use /new to start a new session.",
+          );
+        }
+
+        try {
+          const workoutId = ctx.session.activeWorkoutId;
+
+          await workoutService.cancelWorkout(workoutId);
+
+          resetWorkoutSession(ctx);
+
+          await ctx.deleteMessage();
+          await ctx.reply("Workout session has been canceled successfully.");
+        } catch (error) {
+          console.error(error);
+          await ctx.reply("Failed to cancel workout.");
+        }
+      }
     } else if (data === "wrk:additional_ex") {
       if (
         ctx.session.templateWorkout &&
@@ -300,19 +327,10 @@ export const workoutHandler = {
         "No active workout session found. Use /new to start a new session.",
       );
     }
-
-    try {
-      const workoutId = ctx.session.activeWorkoutId;
-
-      await workoutService.cancelWorkout(workoutId);
-
-      resetWorkoutSession(ctx);
-
-      await ctx.reply("Workout session has been canceled successfully.");
-    } catch (error) {
-      console.error(error);
-      await ctx.reply("Failed to cancel workout.");
-    }
+    return ctx.reply(
+      "Are you sure you want to cancel current workout? All data will be lost.",
+      { reply_markup: confirmKeyboard("cancel_workout") },
+    );
   },
 
   async handleUndo(ctx: MyContext) {
@@ -489,7 +507,6 @@ export const workoutHandler = {
     currentSets: Array<{ weight: number; reps: number }>,
   ) {
     let text = `${exerciseName} (${currentExerciseNum} / ${totalExercises})\n`;
-    console.log(text);
 
     text += "\nGoal:";
     goalSets.forEach(
