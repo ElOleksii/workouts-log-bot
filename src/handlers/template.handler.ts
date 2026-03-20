@@ -1,7 +1,6 @@
 import { InlineKeyboard } from "grammy";
 import type { MyContext, TemplateDraft } from "../types/index.js";
 import workoutService from "../services/workout.service.js";
-import { formatWorkoutSummary } from "../utils/utils.js";
 import { templateService } from "../services/template.service.js";
 import { formatKyivDate } from "../utils/time.js";
 
