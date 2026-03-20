@@ -13,13 +13,18 @@ const resetWorkoutSession = (ctx: MyContext) => {
   ctx.session.currentMessageId = null;
 };
 
-const workoutMenuKeyboard = new InlineKeyboard()
-  .text("Next exercise", "wrk:next_tmpl_ex")
-  .text("Skip exercise", "wrk:skip_tmpl_ex")
-  .row()
-  .text("Replace exercise", "wrk:replace_tmpl_ex")
-  .text("Additional exercise", "wrk:additional_ex")
-  .row();
+const workoutMenuKeyboard = () =>
+  new InlineKeyboard()
+    .text("Next exercise", "wrk:next_tmpl_ex")
+    .text("Skip exercise", "wrk:skip_tmpl_ex")
+    .row()
+    .text("Replace exercise", "wrk:replace_tmpl_ex")
+    .text("Additional exercise", "wrk:additional_ex")
+    .row();
+
+const confirmation = () => {
+  const confirmKeyboard = new InlineKeyboard().text("Confirm", "wrk");
+};
 
 const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
@@ -55,11 +60,16 @@ const startNextTemplateExercise = async (ctx: MyContext) => {
     });
   }
 
+  const currentTemplate = ctx.session.templateWorkout;
+  const templateOptionalMsg = currentTemplate
+    ? `(${currentTemplate.currentExerciseIdx + 1} / ${currentTemplate.exercises.length})`
+    : "";
+
   const message = await ctx.reply(
-    `Current exercise: ${newExercise.name}\n\n` +
+    `Current exercise: ${newExercise.name} ${templateOptionalMsg}\n\n` +
       `${goalText}\n` +
       `Enter weight and repetitions (e.g., 50, 5).`,
-    { reply_markup: workoutMenuKeyboard },
+    { reply_markup: workoutMenuKeyboard() },
   );
 
   ctx.session.currentMessageId = message.message_id;
@@ -379,7 +389,7 @@ export const workoutHandler = {
         return ctx.reply(
           `The exercise was replaced with ${newExercise.name}.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: workoutMenuKeyboard,
+            reply_markup: workoutMenuKeyboard(),
           },
         );
       } catch (e) {
@@ -405,7 +415,7 @@ export const workoutHandler = {
         return ctx.reply(
           `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
           {
-            reply_markup: workoutMenuKeyboard,
+            reply_markup: workoutMenuKeyboard(),
           },
         );
       } catch (e) {
@@ -431,9 +441,24 @@ export const workoutHandler = {
         await workoutService.addSet(exerciseId, weight, reps);
         ctx.session.currentExerciseSets.push({ weight, reps });
         if (ctx.session.workoutMode === "template_workout") {
-          return ctx.reply(`Set recorded: ${weight}kg × ${reps}`, {
-            reply_markup: workoutMenuKeyboard,
-          });
+          const templateWorkout = ctx.session.templateWorkout;
+          const messageId = ctx.session.currentMessageId;
+
+          if (templateWorkout && messageId) {
+            const currentExercise =
+              templateWorkout.exercises[templateWorkout.currentExerciseIdx];
+            const message = this.buildExerciseMessage(
+              currentExercise!.name,
+              templateWorkout.currentExerciseIdx + 1,
+              templateWorkout.exercises.length,
+              currentExercise!.sets,
+              ctx.session.currentExerciseSets,
+            );
+
+            await ctx.api.editMessageText(ctx.chat!.id, messageId, message, {
+              reply_markup: workoutMenuKeyboard(),
+            });
+          }
         } else {
           return ctx.reply(`Set recorded: ${weight}kg × ${reps}`);
         }
@@ -443,22 +468,13 @@ export const workoutHandler = {
       }
     }
 
-    if (ctx.session.workoutMode === "template_workout") {
-      return ctx.reply(
-        "Enter weight and reps (e.g., 50 10).\n\n" +
-          "If you want to add or replace an exercise, please use the buttons under the exercise message.",
-      );
-    }
-
     try {
       const activeWorkout = ctx.session.activeWorkoutId;
       const exercise = await workoutService.addExercise(activeWorkout, text);
 
       ctx.session.currentExerciseId = exercise.id;
 
-      await ctx.reply(
-        `Exercise "${text}" has been added.\nPlease enter the weight and repetitions (e.g., 50, 5).`,
-      );
+      await ctx.reply(`Exercise "${text}" has been added.`);
     } catch (error) {
       console.log(error);
       return ctx.reply("Failed to add exercise");
@@ -473,6 +489,7 @@ export const workoutHandler = {
     currentSets: Array<{ weight: number; reps: number }>,
   ) {
     let text = `${exerciseName} (${currentExerciseNum} / ${totalExercises})\n`;
+    console.log(text);
 
     text += "\nGoal:";
     goalSets.forEach(
