@@ -5,6 +5,7 @@ import type { TemplateDraft, EditorMode } from "./template.types.js";
 export interface SessionData {
   activeWorkoutId: number | null;
   currentExerciseId: number | null;
+  currentExerciseName: string | null;
   workoutMode: WorkoutMode;
   templateWorkout: TemplateWorkout | null;
 
