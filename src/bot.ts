@@ -22,6 +22,7 @@ const initial = (): SessionData => {
   return {
     activeWorkoutId: null,
     currentExerciseId: null,
+    currentExerciseName: null,
     workoutMode: "idle",
     templateWorkout: null,
     templateDraft: null,

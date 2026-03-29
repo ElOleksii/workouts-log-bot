@@ -7,6 +7,7 @@ import { templateService } from "../services/template.service.js";
 const resetWorkoutSession = (ctx: MyContext) => {
   ctx.session.activeWorkoutId = null;
   ctx.session.currentExerciseId = null;
+  ctx.session.currentExerciseName = null;
   ctx.session.workoutMode = "idle";
   ctx.session.templateWorkout = null;
   ctx.session.currentExerciseSets = [];
@@ -26,6 +27,11 @@ const confirmKeyboard = (action: string) =>
   new InlineKeyboard()
     .text("✅ Confirm", `wrk:confirm:${action}`)
     .text("❌ Back", `wrk:confirm:cancel`);
+
+const freeWorkoutKeyboard = () =>
+  new InlineKeyboard()
+    .text("➡️ Next exercise", "wrk:next_ex")
+    .text("↩️ Undo", "wrk:undo_ex");
 
 const startNextTemplateExercise = async (ctx: MyContext) => {
   const currentExerciseIdx = ctx.session.templateWorkout?.currentExerciseIdx;
@@ -135,6 +141,7 @@ export const workoutHandler = {
         const workout = await workoutService.createWorkout(userId);
 
         ctx.session.activeWorkoutId = workout.id;
+        ctx.session.workoutMode = "await_extra_name";
 
         await ctx.reply(
           'Workout session initiated. Please enter the name of your first exercise (e.g., "Pull-ups").',
@@ -279,6 +286,11 @@ export const workoutHandler = {
       } catch (e) {
         console.error(e);
       }
+    } else if (data === "wrk:next_ex") {
+      ctx.session.workoutMode = "await_extra_name";
+      await ctx.reply("Enter the name of the next exercise:");
+    } else if (data === "wrk:undo_ex") {
+      await workoutHandler.handleUndo(ctx);
     }
   },
 
@@ -353,6 +365,39 @@ export const workoutHandler = {
 
       switch (result.type) {
         case "SET_DELETED":
+          ctx.session.currentExerciseSets.pop();
+
+          const messageId = ctx.session.currentMessageId;
+          const exerciseName = ctx.session.currentExerciseName;
+
+          if (messageId && exerciseName) {
+            if (ctx.session.workoutMode === "template_workout") {
+              const templateWorkout = ctx.session.templateWorkout;
+              if (!templateWorkout) return;
+              const currentExercise =
+                templateWorkout.exercises[templateWorkout.currentExerciseIdx];
+              const message = this.buildExerciseMessage(
+                currentExercise!.name,
+                templateWorkout.currentExerciseIdx + 1,
+                templateWorkout.exercises.length,
+                ctx.session.currentExerciseSets,
+                currentExercise!.sets,
+              );
+
+              await ctx.api.editMessageText(ctx.chat!.id, messageId, message, {
+                reply_markup: workoutMenuKeyboard(),
+              });
+            } else if (ctx.session.workoutMode === "free_workout") {
+              const message = this.buildFreeExerciseMessage(
+                exerciseName,
+                ctx.session.currentExerciseSets,
+              );
+
+              await ctx.api.editMessageText(ctx.from!.id, messageId, message, {
+                reply_markup: freeWorkoutKeyboard(),
+              });
+            }
+          }
           await ctx.reply(
             `Last set (${result.weight}kg × ${result.reps}) has been removed.`,
           );
@@ -360,10 +405,16 @@ export const workoutHandler = {
 
         case "EXERCISE_DELETED":
           ctx.session.currentExerciseId = null;
+          ctx.session.currentExerciseName = null;
+          ctx.session.currentMessageId = null;
 
           await ctx.reply(
             `Exercise "${result.name}" has been removed (no sets were recorded).`,
           );
+
+          await ctx.reply("Enter the name of your exercise:");
+          ctx.session.workoutMode = "await_extra_name";
+
           break;
 
         case "NOTHING_TO_DELETE":
@@ -428,14 +479,27 @@ export const workoutHandler = {
         );
 
         ctx.session.currentExerciseId = newExercise.id;
-        ctx.session.workoutMode = "template_workout";
+        ctx.session.currentExerciseSets = [];
+        ctx.session.currentExerciseName = newExercise.name;
+        ctx.session.workoutMode = ctx.session.templateWorkout
+          ? "template_workout"
+          : "free_workout";
 
-        return ctx.reply(
-          `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
-          {
-            reply_markup: workoutMenuKeyboard(),
-          },
-        );
+        if (ctx.session.templateWorkout) {
+          return ctx.reply(
+            `New exercise ${newExercise.name} has created.\nEnter weight and repetitions (e.g., 50, 5). `,
+            {
+              reply_markup: workoutMenuKeyboard(),
+            },
+          );
+        } else {
+          const message = this.buildFreeExerciseMessage(newExercise.name, []);
+          const sent = await ctx.reply(message, {
+            reply_markup: freeWorkoutKeyboard(),
+          });
+          ctx.session.currentMessageId = sent.message_id;
+          return;
+        }
       } catch (e) {
         console.error(e);
         return ctx.reply("An error occured while adding new exercise.");
@@ -478,24 +542,32 @@ export const workoutHandler = {
             });
           }
         } else {
-          return ctx.reply(`Set recorded: ${weight}kg × ${reps}`);
+          const currentExerciseName = ctx.session.currentExerciseName;
+          const currentExerciseSets = ctx.session.currentExerciseSets;
+          const messageId = ctx.session.currentMessageId;
+
+          if (currentExerciseName && messageId) {
+            const message = this.buildFreeExerciseMessage(
+              currentExerciseName,
+              currentExerciseSets,
+            );
+
+            await ctx.api.editMessageText(ctx.chat!.id, messageId, message, {
+              reply_markup: freeWorkoutKeyboard(),
+            });
+          }
         }
       } catch (error) {
         console.log(error);
         return ctx.reply("Failed to add set");
       }
+      return;
     }
 
-    try {
-      const activeWorkout = ctx.session.activeWorkoutId;
-      const exercise = await workoutService.addExercise(activeWorkout, text);
-
-      ctx.session.currentExerciseId = exercise.id;
-
-      await ctx.reply(`Exercise "${text}" has been added.`);
-    } catch (error) {
-      console.log(error);
-      return ctx.reply("Failed to add exercise");
+    if (ctx.session.workoutMode === "free_workout") {
+      return ctx.reply(
+        "Enter weight and reps (e.g., 50, 5).\n\nTo add a new exercise, use the button below.",
+      );
     }
   },
 
@@ -515,9 +587,28 @@ export const workoutHandler = {
 
     text += "\nSaved:";
     currentSets.forEach(
-      (s, idx) => (text += `\n✅ Set ${idx + 1}: ${s.weight} × ${s.reps}`),
+      (s, idx) => (text += `\n✅ Set ${idx + 1}: ${s.weight}kg × ${s.reps}`),
     );
 
+    return text;
+  },
+
+  buildFreeExerciseMessage(
+    exerciseName: string,
+    currentSets: Array<{ weight: number; reps: number }>,
+  ) {
+    let text = `Exercise ${exerciseName}\n`;
+    text += "─────────────────";
+
+    currentSets.forEach(
+      (s, idx) => (text += `\n✅ Set ${idx + 1}: ${s.weight}kg × ${s.reps}`),
+    );
+
+    if (currentSets.length === 0) {
+      text += "\n\n Enter weight and reps (e.g., 50, 5).";
+    } else {
+      text += "\n\nEnter next set or chose options below:";
+    }
     return text;
   },
 };
